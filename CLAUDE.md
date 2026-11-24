@@ -1,7 +1,14 @@
 # CLAUDE.md — workout-log
 
 This repo (Shanedwyer312/workout-log) holds Shane's personal workout tracker, a rebuild of the old BodySpace app he misses.
-The app is called **Iron Log** for now. The name may change later, which is why the repo has a neutral name.
+The app is called **SetRep** (written with a capital R). It was previously called Iron Log; the current
+`index.html` still shows the old name and should be updated to SetRep when building starts.
+
+## Name vs. app ID
+- Visible app name: **SetRep**. This can be changed any time without affecting data.
+- Android app ID: **`com.shanedwyer.workoutlog`**. This is permanent. Never change it: a different ID makes
+  Android treat it as a new app, so updates won't install over the old one and data is lost.
+- The repo name `workout-log` is neutral on purpose so the visible name can change later.
 
 ## What it does today
 - Workout logging and saved routines
