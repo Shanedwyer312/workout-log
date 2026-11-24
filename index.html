@@ -1,8 +1,23 @@
-<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
-<title>Iron Log</title>
-<meta name="claude:viewport-fit-sides" content="cover">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@600;700;800&family=Figtree:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>SetRep</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="theme-color" content="#e9ecef" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0f1215" media="(prefers-color-scheme: dark)">
+<style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style>
+<style>
+@font-face{font-family:"Saira Condensed";font-weight:600;font-display:swap;src:url(fonts/saira-condensed-latin-600-normal.woff2) format("woff2")}
+@font-face{font-family:"Saira Condensed";font-weight:700;font-display:swap;src:url(fonts/saira-condensed-latin-700-normal.woff2) format("woff2")}
+@font-face{font-family:"Saira Condensed";font-weight:800;font-display:swap;src:url(fonts/saira-condensed-latin-800-normal.woff2) format("woff2")}
+@font-face{font-family:"Figtree";font-weight:400;font-display:swap;src:url(fonts/figtree-latin-400-normal.woff2) format("woff2")}
+@font-face{font-family:"Figtree";font-weight:500;font-display:swap;src:url(fonts/figtree-latin-500-normal.woff2) format("woff2")}
+@font-face{font-family:"Figtree";font-weight:600;font-display:swap;src:url(fonts/figtree-latin-600-normal.woff2) format("woff2")}
+@font-face{font-family:"Figtree";font-weight:700;font-display:swap;src:url(fonts/figtree-latin-700-normal.woff2) format("woff2")}
+@font-face{font-family:"IBM Plex Mono";font-weight:500;font-display:swap;src:url(fonts/ibm-plex-mono-latin-500-normal.woff2) format("woff2")}
+@font-face{font-family:"IBM Plex Mono";font-weight:600;font-display:swap;src:url(fonts/ibm-plex-mono-latin-600-normal.woff2) format("woff2")}
+</style>
+</head><body>
 <style>
 /* Layout: single phone-width column, sticky top bar, fixed bottom tab bar; sheets slide over for editing. Gym-steel neutrals, cobalt for actions, a blood-warm heat scale reserved for muscle load. */
 :root{
@@ -166,8 +181,8 @@ td{padding:8px 6px;border-bottom:1px solid var(--line);font-family:var(--f-num);
 
 <div class="wrap">
   <header class="top">
-    <div><div class="brand">Iron<b>Log</b></div></div>
-    <small id="who"></small>
+    <div><div class="brand">Set<b>Rep</b></div></div>
+    <button class="btn quiet sm" data-act="backup" aria-label="Backup and restore">Backup</button>
   </header>
   <main id="view"></main>
 </div>
@@ -308,7 +323,82 @@ const LVL_LABEL=["0","1–3","4–7","8–11","12+"];
 const S={uid:null,db:null,assets:null,status:"loading",profile:{routines:[],custom:[],units:"lb"},
   workouts:[],stats:[],photos:[],tab:"week",weekOff:0,selM:null,metric:"weight",cmp:[],
   edit:null,layer:null,confirm:null,saveState:""};
-try{const t=localStorage.getItem("ironlog.tab");if(t)S.tab=t}catch(e){}
+try{const t=localStorage.getItem("setrep.tab");if(t)S.tab=t}catch(e){}
+S.urls={};
+
+/* ---------- on-device storage (IndexedDB) ----------
+   A small stand-in for the old Claude storage API, so the rest of the app is unchanged.
+   Stores: meta (profile, settings), workouts, stats, photos (photo info), blobs (photo files). */
+const STORES=["meta","workouts","stats","photos","blobs"];
+const Local=(()=>{
+  let dbp=null;
+  const open=()=>dbp||(dbp=new Promise((res,rej)=>{
+    if(!("indexedDB" in window))return rej(new Error("no indexeddb"));
+    const r=indexedDB.open("setrep",1);
+    r.onupgradeneeded=()=>{const d=r.result;STORES.forEach(n=>{if(!d.objectStoreNames.contains(n))d.createObjectStore(n)})};
+    r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);
+  }));
+  const wrapErr=e=>{if(e&&e.name==="QuotaExceededError"){const x=new Error("quota");x.code="quota_exceeded";return x}return e||new Error("storage error")};
+  async function run(stores,mode,fn){
+    const d=await open();
+    return new Promise((res,rej)=>{
+      let out;const t=d.transaction(stores,mode);
+      const r=fn(t);if(r&&"onsuccess" in r)r.onsuccess=()=>{out=r.result};
+      t.oncomplete=()=>res(out);t.onerror=t.onabort=()=>rej(wrapErr(t.error));
+    });
+  }
+  const get=(st,k)=>run(st,"readonly",t=>t.objectStore(st).get(k));
+  const put=(st,k,v)=>run(st,"readwrite",t=>t.objectStore(st).put(v,k));
+  const del=(st,k)=>run(st,"readwrite",t=>t.objectStore(st).delete(k));
+  async function all(st){
+    const d=await open();
+    return new Promise((res,rej)=>{
+      const out=[];const t=d.transaction(st,"readonly");const c=t.objectStore(st).openCursor();
+      c.onsuccess=()=>{const cur=c.result;if(cur){out.push([cur.key,cur.value]);cur.continue()}};
+      t.oncomplete=()=>res(out);t.onerror=t.onabort=()=>rej(wrapErr(t.error));
+    });
+  }
+  const newId=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+  const subs={};
+  async function notify(st){const rows=await all(st);(subs[st]||[]).forEach(f=>f(rows))}
+  function collection(st){
+    return{
+      doc(id){id=id||newId();return{id,
+        set:async v=>{await put(st,id,v);notify(st)},
+        delete:async()=>{await del(st,id);notify(st)}}},
+      orderBy(){return this},limit(){return this},
+      onSnapshot(fn,onErr){
+        const cb=rows=>fn({docs:rows.map(([k,v])=>({id:k,data:()=>v}))});
+        (subs[st]=subs[st]||[]).push(cb);
+        all(st).then(cb).catch(e=>onErr&&onErr(e));
+      }
+    };
+  }
+  const profile={
+    set:async v=>{await put("meta","profile",v);notify("meta")},
+    onSnapshot(fn,onErr){
+      const cb=async()=>{const v=await get("meta","profile");fn({exists:v!=null,data:()=>v})};
+      (subs.meta=subs.meta||[]).push(cb);cb().catch(e=>onErr&&onErr(e));
+    },
+    collection
+  };
+  const assets={
+    upload:async blob=>{const id=newId();await put("blobs",id,blob);return{id}},
+    delete:async id=>{await del("blobs",id)},
+    get:id=>get("blobs",id)
+  };
+  async function dumpAll(){const o={};for(const st of STORES)o[st]=await all(st);return o}
+  async function replaceAll(data){
+    const d=await open();
+    await new Promise((res,rej)=>{
+      const t=d.transaction(STORES,"readwrite");
+      STORES.forEach(st=>{const s=t.objectStore(st);s.clear();(data[st]||[]).forEach(([k,v])=>s.put(v,k))});
+      t.oncomplete=res;t.onerror=t.onabort=()=>rej(wrapErr(t.error));
+    });
+    for(const st of STORES)await notify(st);
+  }
+  return{open,get,put,profile,assets,dumpAll,replaceAll};
+})();
 const exMap=()=>{const m={};LIB.concat(S.profile.custom||[]).forEach(e=>m[e.id]=e);return m};
 const exName=id=>(exMap()[id]||{name:"Unknown exercise"}).name;
 const U=()=>S.profile.units||"lb";
@@ -463,17 +553,17 @@ function viewPhotos(){
   let cmp="";
   if(S.cmp.length===2){const[p1,p2]=S.cmp.map(id=>S.photos.find(p=>p.id===id)).filter(Boolean).sort((a,b)=>a.date<b.date?-1:1);
     if(p1&&p2){const days=Math.round((pdate(p2.date)-pdate(p1.date))/864e5);const w1=weightNear(p1.date),w2=weightNear(p2.date);
-    cmp=`<div class="card stack"><div class="row between"><h3>Compare</h3><button class="txt" data-act="clrcmp">Clear</button></div><div class="cmp">${[p1,p2].map((p,i)=>`<figure><img src="/_blob/${p.asset}" alt="${esc(p.pose)} photo from ${fmtShort(p.date)}"><figcaption>${fmtD(p.date)}${[w1,w2][i]!=null?` · ${fmtN([w1,w2][i])} ${U()}`:""}</figcaption></figure>`).join("")}</div><div class="muted" style="font-size:13px">${days} days apart${w1!=null&&w2!=null?` · ${w2-w1>0?"+":""}${fmtN(w2-w1)} ${U()}`:""}</div></div>`;}}
+    cmp=`<div class="card stack"><div class="row between"><h3>Compare</h3><button class="txt" data-act="clrcmp">Clear</button></div><div class="cmp">${[p1,p2].map((p,i)=>`<figure><img src="${S.urls[p.asset]||""}" alt="${esc(p.pose)} photo from ${fmtShort(p.date)}"><figcaption>${fmtD(p.date)}${[w1,w2][i]!=null?` · ${fmtN([w1,w2][i])} ${U()}`:""}</figcaption></figure>`).join("")}</div><div class="muted" style="font-size:13px">${days} days apart${w1!=null&&w2!=null?` · ${w2-w1>0?"+":""}${fmtN(w2-w1)} ${U()}`:""}</div></div>`;}}
   return `<section class="view">
   <h2>Progress photos</h2>
   ${can?`<form class="card stack" id="photoform"><div class="eyebrow">Add a photo</div>
     <div class="grid2"><label>Date<input type="date" id="ph-date" value="${ymd(new Date())}"></label><label>Pose<select id="ph-pose"><option>Front</option><option>Side</option><option>Back</option><option>Flex</option></select></label></div>
     <label>Photo<input type="file" id="ph-file" accept="image/jpeg,image/png,image/webp,image/*"></label>
-    <button class="btn" type="submit" id="ph-go">Upload</button>
-    <div class="muted" style="font-size:12px">Photos are resized to 1600px and stored with this page. Only people you share the page with can see them.</div></form>`
-  :`<div class="notice">Photo uploads are available to the owner of this page. Open it from your own Claude account to add photos.</div>`}
+    <button class="btn" type="submit" id="ph-go">Add photo</button>
+    <div class="muted" style="font-size:12px">Photos are resized to 1600px and stay on this phone. They're included in backups.</div></form>`
+  :`<div class="notice">Photos can't be saved on this device.</div>`}
   ${cmp}
-  ${ph.length?`<div class="stack"><div class="eyebrow">${S.cmp.length<2?"Tap two photos to compare them":"Tap a photo to change the comparison"}</div><div class="pgrid">${ph.map(p=>`<button class="ph ${S.cmp.includes(p.id)?"on":""}" data-act="cmp" data-id="${p.id}"><img loading="lazy" src="/_blob/${p.asset}" alt="${esc(p.pose)} photo, ${fmtShort(p.date)}"><span class="cap">${fmtShort(p.date)} · ${esc(p.pose)}</span></button>`).join("")}</div>
+  ${ph.length?`<div class="stack"><div class="eyebrow">${S.cmp.length<2?"Tap two photos to compare them":"Tap a photo to change the comparison"}</div><div class="pgrid">${ph.map(p=>`<button class="ph ${S.cmp.includes(p.id)?"on":""}" data-act="cmp" data-id="${p.id}"><img loading="lazy" src="${S.urls[p.asset]||""}" alt="${esc(p.pose)} photo, ${fmtShort(p.date)}"><span class="cap">${fmtShort(p.date)} · ${esc(p.pose)}</span></button>`).join("")}</div>
   ${S.cmp.length===1?`<div class="confirm">${S.confirm==="ph"?`<span>Delete this photo for good?</span><button class="btn danger sm" data-act="delph">Delete</button><button class="txt" data-act="ask" data-k="">Cancel</button>`:`<button class="txt" style="color:var(--warn)" data-act="ask" data-k="ph">Delete selected photo</button>`}</div>`:""}</div>`
   :`<div class="empty"><strong style="color:var(--fg)">No photos yet</strong>Shoot the same poses in the same light every few weeks. Pick any two here to see them side by side.</div>`}
   </section>`;
@@ -549,19 +639,80 @@ function sheetHistory(){
   </div></div></div>`;
 }
 
+/* ---------- backup ---------- */
+function sheetBackup(){
+  const p=S.pendingImport;
+  const last=S.lastExport?new Date(S.lastExport).toLocaleDateString(undefined,{month:"short",day:"numeric",year:"numeric"}):null;
+  return `<div class="sheet"><header class="sh-h"><button class="txt" data-act="closeb">Done</button><h2>Backup</h2><span style="width:48px"></span></header>
+  <div class="sh-b"><div class="inner">
+  <div class="notice">Everything is saved on this phone only. Export a backup now and then and keep it somewhere safe (Google Drive, email it to yourself). It's the only way to move your history to a new phone or into the app version.</div>
+  <div class="card stack">
+    <div class="eyebrow">Export</div>
+    <div class="muted" style="font-size:14px">${[[S.workouts.length,"workout"],[S.stats.length,"stat entry","stat entries"],[S.photos.length,"photo"],[(S.profile.routines||[]).length,"routine"]].map(([n,one,many])=>`<span class="num">${n}</span> ${n===1?one:(many||one+"s")}`).join(" · ")}</div>
+    <div class="muted" style="font-size:13px">${last?`Last backup: ${last}`:"No backup made yet."}</div>
+    <button class="btn" data-act="export">Export backup file</button>
+  </div>
+  <div class="card stack">
+    <div class="eyebrow">Import</div>
+    ${p?`<div style="font-size:14px">Backup from <strong>${esc(p.when)}</strong>: <span class="num">${p.counts.workouts}</span> workouts, <span class="num">${p.counts.stats}</span> stat entries, <span class="num">${p.counts.photos}</span> photos.</div>
+      <div class="notice" style="background:transparent;border:1px solid var(--warn);color:var(--warn)">Importing replaces everything currently in the app with this backup.</div>
+      <div class="row"><button class="btn danger" data-act="doimport">Replace with backup</button><button class="txt" data-act="cancelimport">Cancel</button></div>`
+    :`<div class="muted" style="font-size:14px">Restore from a backup file made with Export.</div>
+      <label>Backup file<input type="file" id="imp-file" accept=".json,application/json"></label>`}
+  </div>
+  </div></div></div>`;
+}
+const blobToDataURL=b=>new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=()=>rej(r.error);r.readAsDataURL(b)});
+function dataURLToBlob(u){const[h,b64]=u.split(",");const type=(h.match(/data:([^;]+)/)||[])[1]||"application/octet-stream";const bin=atob(b64);const a=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)a[i]=bin.charCodeAt(i);return new Blob([a],{type})}
+async function doExport(btn){
+  btn.disabled=true;btn.textContent="Preparing…";
+  try{
+    const data=await Local.dumpAll();
+    data.blobs=await Promise.all(data.blobs.map(async([k,b])=>[k,await blobToDataURL(b)]));
+    const out={app:"setrep",version:1,exported:new Date().toISOString(),data};
+    const file=new Blob([JSON.stringify(out)],{type:"application/json"});
+    const a=document.createElement("a");a.href=URL.createObjectURL(file);a.download=`setrep-backup-${ymd(new Date())}.json`;
+    document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),60000);
+    S.lastExport=Date.now();await Local.put("meta","lastExport",S.lastExport);
+    toast("Backup saved to Downloads");
+  }catch(e){toast("Couldn't make the backup. Try again.")}
+  rerenderSheetKeepScroll();
+}
+async function readImport(file){
+  try{
+    const j=JSON.parse(await file.text());
+    if(j.app!=="setrep"||!j.data)throw new Error("bad");
+    const n=k=>(j.data[k]||[]).length;
+    S.pendingImport={json:j,when:new Date(j.exported).toLocaleDateString(undefined,{month:"short",day:"numeric",year:"numeric"}),counts:{workouts:n("workouts"),stats:n("stats"),photos:n("photos")}};
+  }catch(e){toast("That isn't a SetRep backup file.")}
+  rerenderSheetKeepScroll();
+}
+async function doImport(btn){
+  const p=S.pendingImport;if(!p)return;
+  btn.disabled=true;btn.textContent="Importing…";
+  try{
+    const data={...p.json.data};
+    data.blobs=(data.blobs||[]).map(([k,u])=>[k,dataURLToBlob(u)]);
+    Object.values(S.urls).forEach(u=>URL.revokeObjectURL(u));S.urls={};S.cmp=[];
+    await Local.replaceAll(data);
+    S.lastExport=await Local.get("meta","lastExport");
+    S.pendingImport=null;S.edit=null;renderSheet();render();toast("Backup restored");
+  }catch(e){toast(e?.code==="quota_exceeded"?"Not enough space on this phone for that backup.":"Import failed. Nothing was changed.");btn.disabled=false;btn.textContent="Replace with backup"}
+}
+
 /* ---------- render ---------- */
 const TABS=[["week","Week",'<path d="M12 3a2.5 2.5 0 1 1 0 5a2.5 2.5 0 0 1 0-5zM7 10h10l-1.5 5H14l-1 6h-2l-1-6H8.5z"/>'],["log","Log",'<path d="M3 10v4M21 10v4M6 7v10M18 7v10M6 12h12"/>'],["routines","Routines",'<path d="M5 6h14M5 12h14M5 18h9"/>'],["stats","Stats",'<path d="M4 19V5M4 19h16M8 15l3-4l3 2l5-6"/>'],["photos","Photos",'<rect x="4" y="6" width="16" height="13" rx="2"/><circle cx="12" cy="12.5" r="3"/><path d="M9 6l1.2-2h3.6L15 6"/>']];
 function renderTabs(){$("#tabs").innerHTML=TABS.map(([k,l,ic])=>`<button class="${S.tab===k?"on":""}" data-act="tab" data-t="${k}" aria-current="${S.tab===k?"page":"false"}"><svg viewBox="0 0 24 24">${ic}</svg>${l}</button>`).join("")}
 function renderView(){
   const v=$("#view");
   if(S.status==="loading"){v.innerHTML=`<section class="view"><div class="muted" style="padding:40px 0;text-align:center">Loading your log…</div></section>`;return}
-  if(S.status==="nodb"){v.innerHTML=`<section class="view"><div class="notice">This tracker saves to your Claude account. Open it while signed in to claude.ai to log workouts.</div></section>`;return}
+  if(S.status==="nodb"){v.innerHTML=`<section class="view"><div class="notice">SetRep couldn't open storage on this device, so nothing can be saved. If you're in a private/incognito tab, open it in a normal tab instead.</div></section>`;return}
   const f={week:viewWeek,log:viewLog,routines:viewRoutines,stats:viewStats,photos:viewPhotos}[S.tab]||viewWeek;
   const ae=document.activeElement;const keep=ae&&ae.id&&v.contains(ae)?{id:ae.id,val:ae.value}:null;
   v.innerHTML=f();if(S.tab==="week")paintBodies();
   if(keep){const el=document.getElementById(keep.id);if(el){el.value=keep.val;el.focus()}}
 }
-function renderSheet(){$("#sheet").innerHTML=!S.edit?"":S.edit.kind==="workout"?sheetWorkout():sheetRoutine();document.body.style.overflow=S.edit?"hidden":""}
+function renderSheet(){$("#sheet").innerHTML=!S.edit?"":S.edit.kind==="workout"?sheetWorkout():S.edit.kind==="backup"?sheetBackup():sheetRoutine();document.body.style.overflow=S.edit?"hidden":""}
 function renderLayer(){$("#sheet2").innerHTML=!S.layer?"":S.layer.kind==="pick"?sheetPicker():sheetHistory()}
 function render(){renderTabs();renderView()}
 
@@ -598,7 +749,12 @@ document.addEventListener("click",async ev=>{
   if(t.classList.contains("mus")&&!t.dataset.act){S.selM=S.selM===t.dataset.m?null:t.dataset.m;renderView();return}
   const a=t.dataset.act,d=t.dataset;
   switch(a){
-    case"tab":S.tab=d.t;S.confirm=null;try{localStorage.setItem("ironlog.tab",d.t)}catch(e){}render();window.scrollTo(0,0);break;
+    case"tab":S.tab=d.t;S.confirm=null;try{localStorage.setItem("setrep.tab",d.t)}catch(e){}render();window.scrollTo(0,0);break;
+    case"backup":S.edit={kind:"backup"};S.confirm=null;S.pendingImport=null;renderSheet();break;
+    case"closeb":S.edit=null;S.pendingImport=null;renderSheet();break;
+    case"export":await doExport(t);break;
+    case"doimport":await doImport(t);break;
+    case"cancelimport":S.pendingImport=null;rerenderSheetKeepScroll();break;
     case"wk":S.weekOff=Math.min(0,S.weekOff+Number(d.d));renderView();break;
     case"selm":S.selM=S.selM===d.m?null:d.m;renderView();break;
     case"newwk":newWorkout(null);break;
@@ -644,7 +800,16 @@ document.addEventListener("input",ev=>{
     if(el.dataset.ri!=null)S.edit.r.items[+el.dataset.ri].sets=Math.max(1,Math.min(20,parseInt(el.value)||1));
   }
 });
-document.addEventListener("change",ev=>{if(S.edit?.kind==="workout"&&ev.target.dataset.k==="r")rerenderSheetKeepScroll()});
+/* Finishing a reps box redraws the workout (to show PR badges). If that happens while a finger is
+   on a button (e.g. tapping Done right after typing), wait until the tap is finished so it isn't lost. */
+let ptrDown=false,pendingRedraw=false;
+document.addEventListener("pointerdown",()=>{ptrDown=true},true);
+document.addEventListener("pointerup",()=>setTimeout(()=>{ptrDown=false;if(pendingRedraw){pendingRedraw=false;if(S.edit?.kind==="workout")rerenderSheetKeepScroll()}},0),true);
+document.addEventListener("pointercancel",()=>{ptrDown=false},true);
+document.addEventListener("change",ev=>{
+  if(ev.target.id==="imp-file"&&ev.target.files[0]){readImport(ev.target.files[0]);return}
+  if(S.edit?.kind==="workout"&&ev.target.dataset.k==="r"){if(ptrDown)pendingRedraw=true;else rerenderSheetKeepScroll()}
+});
 document.addEventListener("submit",async ev=>{
   ev.preventDefault();const f=ev.target;
   if(f.id==="statform"){
@@ -669,8 +834,8 @@ document.addEventListener("submit",async ev=>{
       const res=await S.assets.upload(blob,{type:blob.type||"image/jpeg"});
       await S.phcol.doc().set({date:$("#ph-date").value||ymd(new Date()),pose:$("#ph-pose").value,asset:res.id,created:Date.now()});
       toast("Photo added");f.reset();$("#ph-date").value=ymd(new Date());
-    }catch(e){const c=e?.code;toast(c==="too_large"?"That photo is over 20 MB.":c==="unsupported_type"?"Use a JPEG, PNG or WebP photo.":c==="quota_or_state"?"Photo storage is full.":"Upload failed. Try again.")}
-    finally{go.disabled=false;go.textContent="Upload"}
+    }catch(e){const c=e?.code;toast(c==="quota_exceeded"?"Phone storage is full. Delete old photos to add more.":"Couldn't save the photo. Try again.")}
+    finally{go.disabled=false;go.textContent="Add photo"}
   }
 });
 async function shrink(file){
@@ -687,21 +852,30 @@ async function shrink(file){
 $("#bodydefs").innerHTML=BODY_DEFS;
 render();
 (async()=>{
-  const [db,user,assets]=await Promise.all([window.claude?.use?.("db"),window.claude?.use?.("user"),window.claude?.use?.("assets")]);
-  const uid=user?await user.id():null;
-  if(!db||!uid){S.status="nodb";render();return}
-  S.db=db;S.uid=uid;S.assets=assets||null;
-  S.pref=db.doc(`data/users/${uid}/profile`);
+  try{await Local.open()}catch(e){S.status="nodb";render();return}
+  try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){}
+  S.assets=Local.assets;
+  S.pref=Local.profile;
   S.wcol=S.pref.collection("workouts");S.scol=S.pref.collection("stats");S.phcol=S.pref.collection("photos");
-  try{const me=await user.me();if(me.name)$("#who").textContent=me.name.split(" ")[0]}catch(e){}
+  try{S.lastExport=await Local.get("meta","lastExport")}catch(e){}
   let got=0;const ready=()=>{if(++got>=2&&S.status==="loading"){S.status="ok";render()}};
-  const onErr=e=>{if(e?.code==="revoked"){S.status="nodb";render()}};
+  const onErr=()=>{toast("Couldn't read saved data on this phone.")};
   S.pref.onSnapshot(s=>{if(s.exists){const d=s.data();S.profile={routines:d.routines||[],custom:d.custom||[],units:d.units||"lb"}}ready();if(S.status==="ok"&&!S.edit)render()},onErr);
   S.wcol.orderBy("date","desc").limit(1000).onSnapshot(q=>{S.workouts=q.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.date===b.date?(b.created||0)-(a.created||0):(a.date<b.date?1:-1));ready();if(S.status==="ok")renderView()},onErr);
   S.scol.onSnapshot(q=>{S.stats=q.docs.map(d=>d.data());if(S.status==="ok")renderView()},onErr);
-  S.phcol.onSnapshot(q=>{S.photos=q.docs.map(d=>({id:d.id,...d.data()}));S.cmp=S.cmp.filter(id=>S.photos.some(p=>p.id===id));if(S.status==="ok")renderView()},onErr);
+  S.phcol.onSnapshot(async q=>{
+    S.photos=q.docs.map(d=>({id:d.id,...d.data()}));S.cmp=S.cmp.filter(id=>S.photos.some(p=>p.id===id));
+    const keep=new Set(S.photos.map(p=>p.asset));
+    Object.keys(S.urls).forEach(k=>{if(!keep.has(k)){URL.revokeObjectURL(S.urls[k]);delete S.urls[k]}});
+    await Promise.all(S.photos.filter(p=>!S.urls[p.asset]).map(async p=>{try{const b=await Local.assets.get(p.asset);if(b)S.urls[p.asset]=URL.createObjectURL(b)}catch(e){}}));
+    if(S.status==="ok")renderView();
+  },onErr);
   setTimeout(()=>{if(S.status==="loading"){S.status="ok";render()}},6000);
 })();
+/* offline support: the service worker keeps a copy of the app on the phone */
+if("serviceWorker" in navigator&&location.protocol!=="file:"){
+  window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
+}
 </script>
 
 </body></html>

@@ -1,8 +1,7 @@
 # CLAUDE.md — workout-log
 
 This repo (Shanedwyer312/workout-log) holds Shane's personal workout tracker, a rebuild of the old BodySpace app he misses.
-The app is called **SetRep** (written with a capital R). It was previously called Iron Log; the current
-`index.html` still shows the old name and should be updated to SetRep when building starts.
+The app is called **SetRep** (written with a capital R). It was previously called Iron Log.
 
 ## Name vs. app ID
 - Visible app name: **SetRep**. This can be changed any time without affecting data.
@@ -23,24 +22,34 @@ The app is called **SetRep** (written with a capital R). It was previously calle
 - Shane works on a Windows PC and isn't an app developer. Prefer a setup where he doesn't have to install
   or run build tools himself (for example, GitHub Actions building the APK on each push). Explain choices plainly.
 
-## The plan
+## Current stage: web app first
+- The repo is public and served by GitHub Pages (main branch, root folder) at
+  https://shanedwyer312.github.io/workout-log/ — every push updates it within a minute or two.
+- Shane uses it on his phone via Chrome → "Add to Home screen".
+- Files: `index.html` (the whole app), `sw.js` (offline copy; bump `CACHE` name when adding files to it),
+  `manifest.webmanifest` (home-screen install), `icons/`, `fonts/` (bundled so it works offline).
+- Data lives in the browser's IndexedDB database `setrep` (stores: meta, workouts, stats, photos, blobs).
+  A small `Local` layer in `index.html` stands in for the old Claude storage API.
+- Backup button (top right) exports one JSON file with everything, photos included, and imports it back
+  (import replaces all data). This is how data moves from the web version into the Android app later.
+- The repo is public: never commit personal data, backups or photos.
+
+## The plan (Android app, later)
 - Capacitor app shell around the web app.
 - GitHub Actions builds the APK on every push and publishes it on the repo's Releases page, where Shane installs it.
 - One permanent signing key, so each update installs over the old version without losing data.
+  The repo is public, so the key must live only in GitHub Actions secrets, never in the repo.
 - All data stored on the phone (IndexedDB), photos included, with Export / Import backup buttons.
 - Fully offline.
 
-## The one big change needed
-`index.html` was built as a Claude artifact. It saves everything through Claude's artifact runtime
-(`window.claude.use("db")`, `"user"` and `"assets"`: collections `workouts`, `stats`, `photos`, a profile doc,
-and photo uploads). That runtime doesn't exist outside claude.ai, so as-is the page shows
-"This tracker saves to your Claude account."
-- Replace it with on-device storage (e.g. IndexedDB), with photos stored on the device too.
-- Add Export / Import backup buttons so his history can never get stranded.
-- The app must work fully offline.
-- There is no existing workout history to migrate. The old artifact's saved data was empty.
+- When converting: the backup export currently downloads through the browser; inside the Android app it will
+  need Capacitor's Filesystem/Share plugins instead. Shane moves his data over with Export → Import.
+
+## History
+`index.html` started as a Claude artifact that saved through Claude's artifact runtime. That was replaced with
+on-device storage (IndexedDB) plus Export/Import, and it now works fully offline.
 
 ## Working with Shane
 - Keep explanations plain.
 - Push changes straight to this repo. Don't hand over files to copy and paste.
-- Don't start building until Shane says go.
+- Test changes in a real browser before pushing (pushes go live on his phone right away).
