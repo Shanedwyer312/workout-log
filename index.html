@@ -140,6 +140,10 @@ label{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600;
 .coach.warn{background:rgba(240,146,94,.14)}
 .mk{font-size:13px;font-weight:700}.mk.up{color:var(--good)}.mk.same{color:var(--muted)}.mk.down{color:var(--warn)}
 .mkc{display:flex;justify-content:center}
+.report-card{width:100%;border-color:var(--accent-soft)}
+.report{font-size:15px;line-height:1.55;gap:8px}
+.report .rp-h{font-size:20px;margin-top:10px}.report .rp-h3{font-size:16px;margin-top:6px}
+.report p{margin:0}.report ul,.report ol{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:4px}
 .sumrow{display:flex;justify-content:space-between;gap:10px;font-size:14px;padding:8px 0;border-bottom:1px solid var(--line)}
 .sumrow:last-child{border-bottom:0}
 .sets{display:grid;grid-template-columns:28px 1fr 1fr 44px 32px;gap:6px;align-items:center}
@@ -431,6 +435,7 @@ function viewWeek(){
     <div class="legend"><span class="eyebrow" style="margin-right:2px">Sets</span>${[0,1,2,3,4].map(i=>`<span><i class="l${i}" style="background:var(--h${i})"></i>${LVL_LABEL[i]}</span>`).join("")}</div>
     <div class="musdetail">${detail}</div>
   </div>
+  ${S.weekOff===0?reportCardHTML():""}
   <div class="statline">
     <div><span>Workouts</span><b>${ws.length}</b></div>
     <div><span>Working sets</span><b>${sets}</b></div>
@@ -711,7 +716,7 @@ function sheetHistory(){
 }
 
 /* ---------- version (shown in Backup) — bump on every push ---------- */
-const APP_VERSION="2026-11-24.3";
+const APP_VERSION="2026-11-24.4";
 
 /* ---------- backup ---------- */
 function sheetBackup(){
@@ -734,6 +739,7 @@ function sheetBackup(){
     :`<div class="muted" style="font-size:14px">Restore from a backup file made with Export.</div>
       <label>Backup file<input type="file" id="imp-file" accept=".json,application/json"></label>`}
   </div>
+  ${syncCardHTML()}
   <div class="muted num" style="font-size:12px;text-align:center">SetRep version ${APP_VERSION}</div>
   </div></div></div>`;
 }
@@ -743,6 +749,7 @@ async function doExport(btn){
   btn.disabled=true;btn.textContent="Preparing…";
   try{
     const data=await Local.dumpAll();
+    data.meta=data.meta.filter(([k])=>!SYNC_KEYS.includes(k));
     data.blobs=await Promise.all(data.blobs.map(async([k,b])=>[k,await blobToDataURL(b)]));
     const out={app:"setrep",version:1,exported:new Date().toISOString(),data};
     const file=new Blob([JSON.stringify(out)],{type:"application/json"});
@@ -767,12 +774,125 @@ async function doImport(btn){
   btn.disabled=true;btn.textContent="Importing…";
   try{
     const data={...p.json.data};
+    const keep=[];for(const k of SYNC_KEYS){const v=await Local.get("meta",k);if(v!=null)keep.push([k,v])}
+    data.meta=(data.meta||[]).filter(([k])=>!SYNC_KEYS.includes(k)).concat(keep);
     data.blobs=(data.blobs||[]).map(([k,u])=>[k,dataURLToBlob(u)]);
     Object.values(S.urls).forEach(u=>URL.revokeObjectURL(u));S.urls={};S.cmp=[];
     await Local.replaceAll(data);
     S.lastExport=await Local.get("meta","lastExport");
     S.pendingImport=null;S.edit=null;renderSheet();render();toast("Backup restored");
   }catch(e){toast(e?.code==="quota_exceeded"?"Not enough space on this phone for that backup.":"Import failed. Nothing was changed.");btn.disabled=false;btn.textContent="Replace with backup"}
+}
+
+/* ---------- sync to a private GitHub repo (for Claude's weekly report) ----------
+   The upload key lives only on this phone (IndexedDB meta "sync"); it is never in backups or the public repo.
+   Uploads data/setrep-data.json (numbers only, no photos) and reads reports/latest.md back. */
+const SYNC_KEYS=["sync","syncHash","report"];
+const SYNC_FILE="data/setrep-data.json",REPORT_FILE="reports/latest.md";
+S.sync=null;S.report=null;S.syncState="";
+const b64=str=>{const bytes=new TextEncoder().encode(str);let bin="";for(let i=0;i<bytes.length;i+=0x8000)bin+=String.fromCharCode.apply(null,bytes.subarray(i,i+0x8000));return btoa(bin)};
+const unb64=b=>new TextDecoder().decode(Uint8Array.from(atob(b.replace(/\s/g,"")),c=>c.charCodeAt(0)));
+async function gh(path,opt={}){
+  const r=await fetch(`https://api.github.com/repos/${S.sync.repo}/${path}`,{...opt,cache:"no-store",headers:{Authorization:`Bearer ${S.sync.token}`,Accept:"application/vnd.github+json","X-GitHub-Api-Version":"2022-11-28",...(opt.headers||{})}});
+  if(r.status===404)return null;
+  if(!r.ok){const e=new Error("gh "+r.status);e.status=r.status;throw e}
+  return r.json();
+}
+function syncPayload(){
+  const ex=exMap();
+  return{app:"setrep",version:1,updated:new Date().toISOString(),units:U(),
+    routines:(S.profile.routines||[]).map(r=>({name:r.name,exercises:(r.items||[]).map(i=>({exercise:exName(i.ex),sets:i.sets}))})),
+    exerciseSettings:Object.fromEntries(Object.keys(S.profile.exSettings||{}).map(k=>[exName(k),exSet(k)])),
+    customExercises:(S.profile.custom||[]).map(e=>({name:e.name,primary:e.p,secondary:e.s})),
+    workouts:[...S.workouts].sort((a,b)=>a.date<b.date?-1:1).map(w=>({date:w.date,name:w.name,exercises:(w.items||[]).map(it=>({exercise:exName(it.ex),primary:(ex[it.ex]||{}).p||[],secondary:(ex[it.ex]||{}).s||[],sets:(it.sets||[]).filter(s=>s&&s.r>0).map(s=>({weight:s.w||0,reps:s.r}))})).filter(e=>e.sets.length)})),
+    bodyStats:[...S.stats].sort((a,b)=>a.date<b.date?-1:1),
+    photos:S.photos.map(p=>({date:p.date,pose:p.pose}))};
+}
+let syncTimer=null,syncing=false;
+function queueSync(delay=2500){if(!S.sync)return;clearTimeout(syncTimer);syncTimer=setTimeout(()=>syncNow(false),delay)}
+async function syncNow(manual){
+  if(!S.sync||syncing)return;
+  if(!navigator.onLine){S.syncState="Offline — will sync when you're back online";if(manual)toast("You're offline. It'll sync when you're back online.");return}
+  syncing=true;S.syncState="Syncing…";refreshSyncUI();
+  try{
+    const payload=syncPayload();const body=JSON.stringify(payload,null,1);
+    const hash=String(body.replace(/"updated":"[^"]*",?/,"").length)+":"+[...body.replace(/"updated":"[^"]*",?/,"")].reduce((h,c)=>(h*31+c.charCodeAt(0))|0,7);
+    const lastHash=await Local.get("meta","syncHash");
+    if(hash!==lastHash||manual){
+      const cur=await gh(`contents/${SYNC_FILE}`);
+      await gh(`contents/${SYNC_FILE}`,{method:"PUT",body:JSON.stringify({message:`SetRep sync ${ymd(new Date())}`,content:b64(body),...(cur&&cur.sha?{sha:cur.sha}:{})})});
+      await Local.put("meta","syncHash",hash);
+    }
+    await pullReport();
+    S.sync.last=Date.now();await Local.put("meta","sync",S.sync);
+    S.syncState="";if(manual)toast("Synced");
+  }catch(e){
+    S.syncState=e.status===401||e.status===403?"The upload key was rejected. Check it in Backup → Sync.":e.status===404?"Can't find that repo. Check the name.":"Sync failed. It'll try again later.";
+    if(manual)toast(S.syncState);
+  }finally{syncing=false;refreshSyncUI()}
+}
+async function pullReport(){
+  const f=await gh(`contents/${REPORT_FILE}`);if(!f||!f.content)return;
+  const text=unb64(f.content);if(S.report&&S.report.text===text)return;
+  const m=text.match(/^<!--\s*date:\s*([0-9-]+)\s*-->/);
+  const isNew=!S.report||S.report.text!==text;
+  S.report={text,date:m?m[1]:ymd(new Date()),seen:isNew?false:S.report.seen};await Local.put("meta","report",S.report);
+  if(S.status==="ok"&&!S.edit)renderView();
+}
+function refreshSyncUI(){if(S.edit?.kind==="backup")rerenderSheetKeepScroll()}
+async function saveSyncSettings(){
+  const repo=($("#sync-repo")?.value||"").trim().replace(/^https?:\/\/github.com\//,"").replace(/\/$/,"");
+  const token=($("#sync-token")?.value||"").trim()||S.sync?.token||"";
+  if(!/^[\w.-]+\/[\w.-]+$/.test(repo)){toast("Repo should look like Shanedwyer312/workout-data");return}
+  if(!token){toast("Paste the upload key first");return}
+  const prev=S.sync;S.sync={repo,token,last:prev?.last||null};
+  try{const r=await gh("");if(!r)throw Object.assign(new Error("x"),{status:404});
+    if(!r.private){S.sync=prev;toast("That repo is public. Use a private repo so your data stays private.");return}
+  }catch(e){S.sync=prev;toast(e.status===401||e.status===403?"GitHub rejected that key.":e.status===404?"Can't find that repo with this key.":"Couldn't reach GitHub. Check your connection.");return}
+  await Local.put("meta","sync",S.sync);await Local.put("meta","syncHash",null);
+  toast("Connected. Syncing now…");await syncNow(false);refreshSyncUI();
+}
+async function removeSync(){S.sync=null;await Local.put("meta","sync",null);await Local.put("meta","syncHash",null);S.syncState="";toast("Sync turned off. The key is erased from this phone.");refreshSyncUI()}
+function syncCardHTML(){
+  const s=S.sync;const last=s?.last?new Date(s.last).toLocaleString(undefined,{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"}):null;
+  return `<div class="card stack">
+    <div class="eyebrow">Sync for weekly report</div>
+    ${s?`<div style="font-size:14px">Connected to <strong>${esc(s.repo)}</strong></div>
+      <div class="muted" style="font-size:13px">${S.syncState?esc(S.syncState):last?`Last synced ${last}.`:"Not synced yet."} Uploads your training numbers (no photos) after each workout so Claude can write your weekly report.</div>
+      <div class="row"><button class="btn" data-act="syncnow">Sync now</button><button class="txt" style="color:var(--warn)" data-act="syncoff">Turn off</button></div>`
+    :`<div class="muted" style="font-size:14px">Connect your private <strong>workout-data</strong> repo so Claude can read your training and write a weekly report. Photos never leave your phone.</div>
+      <label>Private repo<input id="sync-repo" value="Shanedwyer312/workout-data" autocomplete="off" autocapitalize="off" spellcheck="false"></label>
+      <label>Upload key (starts with github_pat_)<input id="sync-token" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Paste your key"></label>
+      <button class="btn" data-act="syncsave">Connect</button>
+      <div class="muted" style="font-size:12px">The key is stored only on this phone. It is never included in backups or sent anywhere except GitHub.</div>`}
+  </div>`;
+}
+/* tiny, safe markdown for Claude's report: headings, bullets, numbered items, bold, italics */
+function mdToHTML(md){
+  const inline=t=>esc(t).replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>").replace(/(^|[^*])\*(?!\s)(.+?)\*/g,"$1<em>$2</em>");
+  const out=[];let list=null;
+  const close=()=>{if(list){out.push(`</${list}>`);list=null}};
+  md.replace(/^<!--[\s\S]*?-->\s*/,"").split(/\r?\n/).forEach(l=>{
+    let m;
+    if(m=l.match(/^#{1,2}\s+(.*)/)){close();out.push(`<h2 class="rp-h">${inline(m[1])}</h2>`)}
+    else if(m=l.match(/^#{3,6}\s+(.*)/)){close();out.push(`<h3 class="rp-h3">${inline(m[1])}</h3>`)}
+    else if(m=l.match(/^\s*[-*•]\s+(.*)/)){if(list!=="ul"){close();out.push("<ul>");list="ul"}out.push(`<li>${inline(m[1])}</li>`)}
+    else if(m=l.match(/^\s*\d+[.)]\s+(.*)/)){if(list!=="ol"){close();out.push("<ol>");list="ol"}out.push(`<li>${inline(m[1])}</li>`)}
+    else if(!l.trim()){close()}
+    else{close();out.push(`<p>${inline(l)}</p>`)}
+  });close();return out.join("");
+}
+function reportCardHTML(){
+  const r=S.report;if(!r)return"";
+  const first=(r.text.replace(/^<!--[\s\S]*?-->\s*/,"").split(/\n/).find(l=>l.trim()&&!/^#/.test(l))||"").replace(/[*#>-]/g,"").trim();
+  return `<button class="card stack report-card" data-act="openreport" style="text-align:left;gap:6px">
+    <div class="row between"><span class="eyebrow">Weekly report from Claude${r.seen?"":` <span class="chip on" style="font-size:10px;padding:1px 6px;margin-left:4px">NEW</span>`}</span><span class="muted num" style="font-size:12px">${fmtShort(r.date)}</span></div>
+    <div style="font-size:14px">${esc(first.slice(0,160))}${first.length>160?"…":""}</div>
+    <span class="txt" style="padding:0">Read report →</span></button>`;
+}
+function sheetReport(){
+  return `<div class="sheet"><header class="sh-h"><button class="txt" data-act="closereport">Done</button><h2>Weekly report</h2><span class="muted num" style="font-size:12px;min-width:48px;text-align:right">${fmtShort(S.report.date)}</span></header>
+  <div class="sh-b"><div class="inner report">${mdToHTML(S.report.text)}</div></div></div>`;
 }
 
 /* ---------- render ---------- */
@@ -787,7 +907,7 @@ function renderView(){
   v.innerHTML=f();if(S.tab==="week")paintBodies();
   if(keep){const el=document.getElementById(keep.id);if(el){el.value=keep.val;el.focus()}}
 }
-function renderSheet(){$("#sheet").innerHTML=!S.edit?"":S.edit.kind==="workout"?sheetWorkout():S.edit.kind==="backup"?sheetBackup():S.edit.kind==="summary"?sheetSummary():sheetRoutine();document.body.style.overflow=S.edit?"hidden":""}
+function renderSheet(){$("#sheet").innerHTML=!S.edit?"":S.edit.kind==="workout"?sheetWorkout():S.edit.kind==="backup"?sheetBackup():S.edit.kind==="summary"?sheetSummary():S.edit.kind==="report"?sheetReport():sheetRoutine();document.body.style.overflow=S.edit?"hidden":""}
 function renderLayer(){$("#sheet2").innerHTML=!S.layer?"":S.layer.kind==="pick"?sheetPicker():sheetHistory()}
 function render(){renderTabs();renderView()}
 
@@ -808,7 +928,7 @@ function flush(e=S.edit){
   return saving;
 }
 let profQ=Promise.resolve();
-function saveProfile(){const body=JSON.parse(JSON.stringify(S.profile));profQ=profQ.then(()=>S.pref.set(body)).catch(()=>toast("Couldn't save. Try again."));return profQ}
+function saveProfile(){const body=JSON.parse(JSON.stringify(S.profile));queueSync(4000);profQ=profQ.then(()=>S.pref.set(body)).catch(()=>toast("Couldn't save. Try again."));return profQ}
 
 /* ---------- actions ---------- */
 function newWorkout(r){
@@ -839,7 +959,12 @@ document.addEventListener("click",async ev=>{
     case"openw":openWorkout(d.id);break;
     case"closew":{const e=S.edit;if(e.dirty&&e.w.items.length===0&&!e.saved)e.dirty=false;await flush(e);
       const sum=e.touched&&e.saved&&e.stage!=="start"?summarize(e):null;
-      S.edit=sum&&sum.sets?{kind:"summary",sum}:null;S.confirm=null;renderSheet();renderView();break}
+      S.edit=sum&&sum.sets?{kind:"summary",sum}:null;S.confirm=null;renderSheet();renderView();if(e.saved)queueSync();break}
+    case"syncsave":t.disabled=true;t.textContent="Connecting…";await saveSyncSettings();if(t.isConnected){t.disabled=false;t.textContent="Connect"}break;
+    case"syncnow":await syncNow(true);break;
+    case"syncoff":await removeSync();break;
+    case"openreport":S.report.seen=true;Local.put("meta","report",S.report);S.edit={kind:"report"};renderSheet();break;
+    case"closereport":S.edit=null;renderSheet();renderView();break;
     case"closesum":S.edit=null;renderSheet();renderView();break;
     case"filltgt":{const it=S.edit.w.items[+d.i];const co=coachFor(it.ex,S.edit.w);it.sets.forEach((x,j)=>{const t=tgtAt(co,j);if(!t)return;if(x.w===""||x.w==null)x.w=t.w;if(x.r===""||x.r==null)x.r=t.r});rerenderSheetKeepScroll();scheduleSave();break}
     case"addset":{const it=S.edit.w.items[+d.i];const l=it.sets[it.sets.length-1];it.sets.push({w:l?l.w:"",r:""});rerenderSheetKeepScroll();scheduleSave();break}
@@ -900,7 +1025,7 @@ document.addEventListener("submit",async ev=>{
     const body={date};let any=false;["weight","bf","waist","chest","arms","thighs"].forEach(k=>{const v=num($("#st-"+k).value);body[k]=v;if(v!=null)any=true});
     if(!any){toast("Enter at least one measurement");return}
     const ex=S.stats.find(s=>s.date===date);if(ex)["weight","bf","waist","chest","arms","thighs"].forEach(k=>{if(body[k]==null&&ex[k]!=null)body[k]=ex[k]});
-    try{await S.scol.doc(date).set(body);toast("Saved")}catch(e){toast("Couldn't save. Try again.")}
+    try{await S.scol.doc(date).set(body);toast("Saved");queueSync()}catch(e){toast("Couldn't save. Try again.")}
   }
   if(f.id==="customform"){
     const name=$("#cx-name").value.trim();if(!name){toast("Name the exercise");return}
@@ -941,6 +1066,9 @@ render();
   S.pref=Local.profile;
   S.wcol=S.pref.collection("workouts");S.scol=S.pref.collection("stats");S.phcol=S.pref.collection("photos");
   try{S.lastExport=await Local.get("meta","lastExport")}catch(e){}
+  try{S.sync=await Local.get("meta","sync")||null;S.report=await Local.get("meta","report")||null}catch(e){}
+  if(S.sync)setTimeout(()=>syncNow(false),3000);
+  window.addEventListener("online",()=>queueSync(1000));
   let got=0;const ready=()=>{if(++got>=2&&S.status==="loading"){S.status="ok";render()}};
   const onErr=()=>{toast("Couldn't read saved data on this phone.")};
   S.pref.onSnapshot(s=>{if(s.exists){const d=s.data();S.profile={routines:d.routines||[],custom:d.custom||[],units:d.units||"lb",exSettings:d.exSettings||{}}}ready();if(S.status==="ok"&&!S.edit)render()},onErr);

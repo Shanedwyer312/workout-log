@@ -33,6 +33,13 @@ The app is called **SetRep** (written with a capital R). It was previously calle
 - Backup button (top right) exports one JSON file with everything, photos included, and imports it back
   (import replaces all data). This is how data moves from the web version into the Android app later.
 - The repo is public: never commit personal data, backups or photos.
+- Coach (in `index.html`): double progression per exercise. `exSet()` = rep range + weight jump (defaults 8–12,
+  +5 lb upper / +10 lb lower), editable per exercise from the exercise history sheet. `coachFor()` = target,
+  `setMark()` = PR / REP / ▲ = ▼ per set, `summarize()` = the "Workout done" screen.
+- Sync: Backup screen → "Sync for weekly report". The upload key is stored only in IndexedDB meta `sync` (never in
+  backups/exports). After workouts/stats/routine changes the app PUTs `data/setrep-data.json` (numbers only, no
+  photos) to the PRIVATE repo Shanedwyer312/workout-data and reads `reports/latest.md` back to show on the Week tab.
+  The weekly report itself is written by a scheduled Claude task following workout-data's CLAUDE.md.
 - Muscle map: the body shapes come from `tools/muscle-map/source.png`, a color-coded chart (one flat color per
   muscle group, made with ChatGPT). `tools/muscle-map/trace.py source.png out.js` traces it into the
   `BODY_VIEWS` block in `index.html` (front/back: outline, skin areas, muscle regions, detail lines).
