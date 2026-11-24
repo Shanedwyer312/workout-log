@@ -134,7 +134,15 @@ label{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600;
 .ex-h{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
 .ex-name{background:none;border:0;padding:0;text-align:left;font-weight:700;font-size:16px;color:var(--fg);text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:3px}
 .last{font-size:12px;color:var(--muted)}
-.sets{display:grid;grid-template-columns:28px 1fr 1fr 40px 32px;gap:6px;align-items:center}
+.coach{display:flex;align-items:center;gap:8px;font-size:13px;line-height:1.35;background:var(--accent-soft);border-radius:8px;padding:8px 10px}
+.coach .ci{font-size:14px}.coach>span:nth-child(2){flex:1}
+.coach.go{background:rgba(79,208,143,.14)}
+.coach.warn{background:rgba(240,146,94,.14)}
+.mk{font-size:13px;font-weight:700}.mk.up{color:var(--good)}.mk.same{color:var(--muted)}.mk.down{color:var(--warn)}
+.mkc{display:flex;justify-content:center}
+.sumrow{display:flex;justify-content:space-between;gap:10px;font-size:14px;padding:8px 0;border-bottom:1px solid var(--line)}
+.sumrow:last-child{border-bottom:0}
+.sets{display:grid;grid-template-columns:28px 1fr 1fr 44px 32px;gap:6px;align-items:center}
 .sets .hd{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .sets .sn{font-family:var(--f-num);color:var(--muted);text-align:center}
 .sets input{font-family:var(--f-num);text-align:center;padding:8px 4px}
@@ -531,17 +539,77 @@ function prevFor(ex,w){
   return null;
 }
 function bestBefore(ex,w){let b=0;S.workouts.forEach(o=>{if(o.id===S.edit?.id||o.date>w.date)return;(o.items||[]).forEach(it=>{if(it.ex===ex)it.sets.forEach(s=>{b=Math.max(b,e1rm(s.w,s.r))})})});return b}
+/* ---------- progressive-overload coach ----------
+   Double progression: each exercise has a rep range (default 8–12) and a weight jump.
+   Hit the top of the range on every working set -> add weight and drop to the bottom of the range.
+   Otherwise keep the weight and beat last time by a rep. */
+const LOWER_BODY=new Set(["quads","hamstrings","glutes","calves","adductors","lower_back"]);
+function exSet(ex){
+  const c=(S.profile.exSettings||{})[ex]||{};const e=exMap()[ex];const lower=!!(e&&e.p.some(m=>LOWER_BODY.has(m)));const kg=U()==="kg";
+  return{min:c.min||8,max:c.max||12,inc:c.inc||(lower?(kg?5:10):(kg?2.5:5)),custom:!!(c.min||c.max||c.inc)};
+}
+function sessionsFor(ex,w,skipId){
+  const out=[];
+  S.workouts.forEach(o=>{if(o.id===skipId||(w&&o.date>w.date))return;
+    (o.items||[]).filter(i=>i.ex===ex).forEach(it=>{const ss=(it.sets||[]).filter(s=>s&&s.r>0);
+      if(ss.length)out.push({date:o.date,created:o.created||0,sets:ss,e:Math.max(...ss.map(s=>e1rm(s.w,s.r))),vol:ss.reduce((a,s)=>a+(s.w||0)*s.r,0)})})});
+  return out.sort((a,b)=>a.date===b.date?b.created-a.created:(a.date<b.date?1:-1));
+}
+function coachFor(ex,w){
+  const c=exSet(ex);const ss=sessionsFor(ex,w,S.edit?.id);
+  if(!ss.length)return{kind:"new",c,targets:[]};
+  const last=ss[0];const top=Math.max(...last.sets.map(s=>s.w||0));
+  const work=last.sets.filter(s=>(s.w||0)===top);
+  let kind,targets;
+  if(top>0&&work.length&&work.every(s=>s.r>=c.max)){const nw=Math.round((top+c.inc)*100)/100;kind="up";targets=last.sets.map(()=>({w:nw,r:c.min}))}
+  else{kind="reps";targets=last.sets.map(s=>({w:s.w,r:Math.min((s.r||0)+1,Math.max(c.max,s.r||0))}))}
+  const stall=ss.length>=4&&Math.max(ss[0].e,ss[1].e,ss[2].e)<=ss[3].e*1.005;
+  return{kind,c,targets,stall,last};
+}
+const tgtAt=(co,j)=>co.targets.length?co.targets[Math.min(j,co.targets.length-1)]:null;
+function repBestAt(ex,wt,w){let b=null;S.workouts.forEach(o=>{if(o.id===S.edit?.id||o.date>w.date)return;(o.items||[]).forEach(it=>{if(it.ex===ex)(it.sets||[]).forEach(s=>{if(s&&s.r>0&&(s.w||0)===wt)b=Math.max(b||0,s.r)})})});return b}
+/* how a set compares: "pr" (best est. 1RM ever), "rep" (most reps ever at this weight), "up", "same", "down", or "" */
+function setMark(ex,s,j,co,best,w){
+  const sw=num(s.w)||0,sr=parseInt(s.r)||0;if(!sr)return"";
+  if(best>0&&e1rm(sw,sr)>best)return"pr";
+  const rb=repBestAt(ex,sw,w);if(rb!=null&&sr>rb)return"rep";
+  const l=co.last?co.last.sets[Math.min(j,co.last.sets.length-1)]:null;if(!l)return"";
+  const lw=l.w||0;
+  if(sw>lw&&sr>=co.c.min)return"up";
+  const a=e1rm(sw,sr),b=e1rm(lw,l.r);
+  if(sw===lw&&sr===l.r)return"same";
+  return a>b*1.001?"up":a<b*0.999?"down":"same";
+}
+const MARK={pr:`<span class="chip pr">PR</span>`,rep:`<span class="chip pr" title="Most reps ever at this weight">REP</span>`,up:`<span class="mk up" title="Beat last time">▲</span>`,same:`<span class="mk same" title="Matched last time">=</span>`,down:`<span class="mk down" title="Below last time">▼</span>`};
+/* refresh the ▲/=/▼/PR markers for one exercise without redrawing (so typing focus isn't lost) */
+function refreshMarks(i){
+  const w=S.edit&&S.edit.w;if(!w||!w.items[i])return;const it=w.items[i];
+  const co=coachFor(it.ex,w),best=bestBefore(it.ex,w);
+  it.sets.forEach((x,j)=>{const el=document.getElementById(`mk-${i}-${j}`);if(el)el.innerHTML=MARK[setMark(it.ex,x,j,co,best,w)]||""});
+}
+function coachHTML(it,i,co){
+  const c=co.c;
+  if(co.kind==="new")return `<div class="coach"><span class="ci">🎯</span><span>First time logged. Pick a weight you can do <b>${c.min}–${c.max}</b> reps with.</span></div>`;
+  const t=co.targets;
+  const line=co.kind==="up"
+    ?`<b>Add weight:</b> <span class="num">${fmtN(t[0].w)} × ${c.min}</span>. You hit ${c.max}+ on every set last time.`
+    :`<b>Beat last time:</b> <span class="num">${t.map(x=>`${fmtN(x.w)}×${x.r}`).join(", ")}</span>`;
+  const empty=it.sets.some(s=>s.w===""||s.r===""||s.w==null||s.r==null);
+  return `<div class="coach ${co.kind==="up"?"go":""}"><span class="ci">🎯</span><span>${line}</span>${empty?`<button class="btn quiet sm" data-act="filltgt" data-i="${i}">Fill</button>`:""}</div>
+  ${co.stall?`<div class="coach warn"><span class="ci">⚠️</span><span>No progress in 3 sessions. Try a lighter week (about −10%), a different rep range, or a new variation.</span></div>`:""}`;
+}
 function itemHTML(it,i,w){
-  const prev=prevFor(it.ex,w);const best=bestBefore(it.ex,w);
+  const prev=prevFor(it.ex,w);const best=bestBefore(it.ex,w);const co=coachFor(it.ex,w);
   return `<div class="ex">
   <div class="ex-h"><div class="stack" style="gap:2px;min-width:0"><button class="ex-name" data-act="hist" data-ex="${it.ex}">${esc(exName(it.ex))}</button>
   <span class="last">${prev?`Last (${fmtShort(prev.date)}): <span class="num">${prev.sets.map(s=>`${fmtN(s.w)}×${s.r}`).join(", ")}</span>`:"First time logging this"}</span></div>
   <div class="row" style="gap:2px;flex-wrap:nowrap">${i>0?`<button class="x" data-act="upex" data-i="${i}" aria-label="Move up" title="Move up">↑</button>`:""}<button class="x" data-act="swapex" data-i="${i}" aria-label="Swap exercise" title="Swap exercise">⇄</button><button class="x" data-act="rmex" data-i="${i}" aria-label="Remove exercise" title="Remove">×</button></div></div>
+  ${coachHTML(it,i,co)}
   <div class="sets"><span class="hd">Set</span><span class="hd">${U()}</span><span class="hd">Reps</span><span></span><span></span>
-  ${it.sets.map((s,j)=>{const ps=prev?.sets[j]||prev?.sets[prev.sets.length-1];const pr=best>0&&e1rm(s.w,s.r)>best;return `<span class="sn">${j+1}</span>
+  ${it.sets.map((s,j)=>{const ps=tgtAt(co,j);const mk=setMark(it.ex,s,j,co,best,w);return `<span class="sn">${j+1}</span>
   <input id="s-${i}-${j}-w" inputmode="decimal" data-i="${i}" data-j="${j}" data-k="w" value="${s.w??""}" placeholder="${ps?fmtN(ps.w):""}" aria-label="Set ${j+1} weight">
   <input id="s-${i}-${j}-r" inputmode="numeric" data-i="${i}" data-j="${j}" data-k="r" value="${s.r??""}" placeholder="${ps?ps.r:""}" aria-label="Set ${j+1} reps">
-  <span>${pr?`<span class="chip pr">PR</span>`:""}</span><button class="x" data-act="rmset" data-i="${i}" data-j="${j}" aria-label="Remove set">×</button>`}).join("")}</div>
+  <span class="mkc" id="mk-${i}-${j}">${MARK[mk]||""}</span><button class="x" data-act="rmset" data-i="${i}" data-j="${j}" aria-label="Remove set">×</button>`}).join("")}</div>
   <button class="btn quiet sm" data-act="addset" data-i="${i}">+ Set</button></div>`;
 }
 function startStepHTML(){
@@ -563,6 +631,39 @@ function sheetWorkout(){
   ${w.items.map((it,i)=>itemHTML(it,i,w)).join("")}
   <button class="btn ghost wide" data-act="pick">+ Add exercise</button>`}
   <div class="confirm">${S.confirm==="w"?`<span>Delete this workout?</span><button class="btn danger sm" data-act="delw">Delete</button><button class="txt" data-act="ask" data-k="">Cancel</button>`:(S.edit.saved?`<button class="txt" style="color:var(--warn)" data-act="ask" data-k="w">Delete workout</button>`:"")}</div>
+  </div></div></div>`;
+}
+function summarize(e){
+  const w=e.w;const r={name:w.name||"Workout",date:w.date,sets:0,vol:0,prs:[],reps:[],up:0,same:0,down:0,ex:[]};
+  w.items.forEach(it=>{
+    const ss=it.sets.filter(x=>parseInt(x.r)>0);if(!ss.length)return;
+    const co=coachFor(it.ex,w);const best=bestBefore(it.ex,w);
+    let up=0,dn=0;const sets=it.sets.map(x=>({w:num(x.w)||0,r:parseInt(x.r)||0}));
+    it.sets.forEach((x,j)=>{const m=setMark(it.ex,x,j,co,best,w);if(!m)return;
+      if(m==="pr"&&!r.prs.includes(it.ex))r.prs.push(it.ex);
+      if(m==="rep"&&!r.reps.includes(it.ex))r.reps.push(it.ex);
+      if(m==="pr"||m==="rep"||m==="up"){r.up++;up++}else if(m==="down"){r.down++;dn++}else r.same++});
+    const done=sets.filter(x=>x.r>0);r.sets+=done.length;const v=done.reduce((a,x)=>a+x.w*x.r,0);r.vol+=v;
+    const bestNow=Math.max(...done.map(x=>e1rm(x.w,x.r)));
+    const delta=co.last&&co.last.e>0?(bestNow/co.last.e-1)*100:null;
+    const topNow=Math.max(...done.map(x=>x.w)),lastTop=co.last?Math.max(...co.last.sets.map(x=>x.w||0)):0;
+    r.ex.push({ex:it.ex,txt:done.map(x=>`${fmtN(x.w)}×${x.r}`).join(", "),delta,up,dn,jump:co.last&&topNow>lastTop?topNow-lastTop:0});
+  });
+  const prevSame=S.workouts.filter(o=>o.id!==e.id&&(o.name||"")===(w.name||"")&&o.date<=w.date).sort((a,b)=>a.date===b.date?(b.created||0)-(a.created||0):(a.date<b.date?1:-1))[0];
+  if(prevSame){const pv=(prevSame.items||[]).reduce((a,it)=>a+(it.sets||[]).filter(x=>x&&x.r>0).reduce((b,x)=>b+(x.w||0)*x.r,0),0);if(pv>0)r.volDelta=(r.vol/pv-1)*100}
+  return r;
+}
+function sheetSummary(){
+  const r=S.edit.sum;const pct=v=>`${v>0?"+":""}${Math.round(v)}%`;
+  const head=r.prs.length+r.reps.length?`${r.prs.length+r.reps.length} record${r.prs.length+r.reps.length>1?"s":""} today 🔥`:r.up>r.down?"More than last time 💪":r.up||r.same?"Logged. Keep pushing.":"Logged.";
+  return `<div class="sheet"><header class="sh-h"><span style="width:48px"></span><h2>Workout done</h2><button class="txt" data-act="closesum">Close</button></header>
+  <div class="sh-b"><div class="inner">
+  <div><div class="eyebrow">${fmtD(r.date)} · ${esc(r.name)}</div><h2 style="margin-top:4px">${head}</h2></div>
+  <div class="statline"><div><span>Sets</span><b>${r.sets}</b></div><div><span>Volume ${U()}</span><b>${r.vol>=10000?Math.round(r.vol/1000)+"k":Math.round(r.vol).toLocaleString()}</b></div><div><span>vs last ${esc(r.name)}</span><b style="color:${r.volDelta==null?"var(--muted)":r.volDelta>=0?"var(--good)":"var(--warn)"}">${r.volDelta==null?"–":pct(r.volDelta)}</b></div></div>
+  <div class="card"><div class="eyebrow" style="margin-bottom:4px">Sets vs last time</div><div class="row" style="gap:16px;font-size:15px"><span class="mk up">▲ ${r.up} beat</span><span class="mk same">= ${r.same} matched</span><span class="mk down">▼ ${r.down} below</span></div></div>
+  ${r.prs.length||r.reps.length?`<div class="card stack" style="gap:6px"><div class="eyebrow">Records</div>${r.prs.map(x=>`<div class="row"><span class="chip pr">PR</span>${esc(exName(x))}: best estimated 1-rep max</div>`).join("")}${r.reps.filter(x=>!r.prs.includes(x)).map(x=>`<div class="row"><span class="chip pr">REP</span>${esc(exName(x))}: most reps at that weight</div>`).join("")}</div>`:""}
+  <div class="card"><div class="eyebrow" style="margin-bottom:2px">Exercises</div>${r.ex.map(x=>`<div class="sumrow"><div class="stack" style="gap:2px;min-width:0"><strong>${esc(exName(x.ex))}</strong><span class="num muted" style="font-size:12px">${x.txt}</span></div>${x.jump?`<span class="num" style="white-space:nowrap;color:var(--good)">+${fmtN(x.jump)} ${U()} ↑</span>`:`<span class="num" style="white-space:nowrap;color:${x.delta==null?"var(--muted)":x.delta>0.5?"var(--good)":x.delta<-0.5?"var(--warn)":"var(--muted)"}">${x.delta==null?"new":`${x.delta>0?"+":""}${x.delta.toFixed(1)}%`}</span>`}</div>`).join("")}
+  <div class="muted" style="font-size:12px;margin-top:6px">% = change in your best set's estimated 1-rep max vs last time. ↑ = you moved up in weight.</div></div>
   </div></div></div>`;
 }
 function sheetRoutine(){
@@ -599,6 +700,9 @@ function sheetHistory(){
   return `<div class="sheet top2"><header class="sh-h"><button class="txt" data-act="closel">Back</button><h2>History</h2><span style="width:48px"></span></header>
   <div class="sh-b"><div class="inner">
   <h3>${esc(exName(ex))}</h3>
+  ${(()=>{const c=exSet(ex);return `<div class="card stack" style="gap:8px"><div class="eyebrow">Progression</div>
+  <div class="grid3"><label>Reps from<input id="xs-min" data-xs="min" data-ex="${ex}" inputmode="numeric" value="${c.min}"></label><label>Reps to<input id="xs-max" data-xs="max" data-ex="${ex}" inputmode="numeric" value="${c.max}"></label><label>Add (${U()})<input id="xs-inc" data-xs="inc" data-ex="${ex}" inputmode="decimal" value="${c.inc}"></label></div>
+  <div class="muted" style="font-size:12px">Work in this rep range. When you hit the top of it on every set, the coach tells you to add this much weight.</div></div>`})()}
   ${best?`<div class="statline" style="grid-template-columns:1fr 1fr"><div><span>Best set</span><b>${fmtN(best.top.w)}×${best.top.r}</b></div><div><span>Est. 1-rep max</span><b>${Math.round(best.e)} <small class="muted" style="font-size:12px">${U()}</small></b></div></div>
   <div class="card stack"><div class="eyebrow">Estimated 1RM by session</div>${lineChart(pts,U())}</div>
   <div class="list">${rows.map(r=>`<div class="card" style="padding:10px 12px"><div class="row between"><span class="num muted" style="font-size:12px">${fmtD(r.d)}</span><span class="num" style="font-size:12px">e1RM ${Math.round(r.e)}</span></div><div class="num">${r.ss.map(s=>`${fmtN(s.w)}×${s.r}`).join("  ")}</div></div>`).join("")}</div>`
@@ -607,7 +711,7 @@ function sheetHistory(){
 }
 
 /* ---------- version (shown in Backup) — bump on every push ---------- */
-const APP_VERSION="2026-11-24.2";
+const APP_VERSION="2026-11-24.3";
 
 /* ---------- backup ---------- */
 function sheetBackup(){
@@ -683,7 +787,7 @@ function renderView(){
   v.innerHTML=f();if(S.tab==="week")paintBodies();
   if(keep){const el=document.getElementById(keep.id);if(el){el.value=keep.val;el.focus()}}
 }
-function renderSheet(){$("#sheet").innerHTML=!S.edit?"":S.edit.kind==="workout"?sheetWorkout():S.edit.kind==="backup"?sheetBackup():sheetRoutine();document.body.style.overflow=S.edit?"hidden":""}
+function renderSheet(){$("#sheet").innerHTML=!S.edit?"":S.edit.kind==="workout"?sheetWorkout():S.edit.kind==="backup"?sheetBackup():S.edit.kind==="summary"?sheetSummary():sheetRoutine();document.body.style.overflow=S.edit?"hidden":""}
 function renderLayer(){$("#sheet2").innerHTML=!S.layer?"":S.layer.kind==="pick"?sheetPicker():sheetHistory()}
 function render(){renderTabs();renderView()}
 
@@ -691,7 +795,7 @@ function render(){renderTabs();renderView()}
 let saveTimer=null,saving=null,again=null;
 function setSave(t){S.saveState=t;const el=$("#savestate");if(el)el.textContent=t}
 function cleanW(w){return{name:(w.name||"Workout").slice(0,80),date:w.date||ymd(new Date()),created:w.created||Date.now(),items:w.items.map(it=>({ex:it.ex,sets:it.sets.map(s=>({w:num(s.w),r:s.r==null||s.r===""?null:Math.max(0,parseInt(s.r)||0)}))}))}}
-function scheduleSave(){if(!S.edit||S.edit.kind!=="workout")return;S.edit.dirty=true;setSave("Editing");clearTimeout(saveTimer);saveTimer=setTimeout(()=>flush(),900)}
+function scheduleSave(){if(!S.edit||S.edit.kind!=="workout")return;S.edit.dirty=true;S.edit.touched=true;setSave("Editing");clearTimeout(saveTimer);saveTimer=setTimeout(()=>flush(),900)}
 function flush(e=S.edit){
   clearTimeout(saveTimer);
   if(!e||e.kind!=="workout"||!e.dirty)return saving||Promise.resolve();
@@ -733,7 +837,11 @@ document.addEventListener("click",async ev=>{
     case"newwk":newWorkout(null);break;
     case"startr":newWorkout((S.profile.routines||[]).find(r=>r.id===d.id));break;
     case"openw":openWorkout(d.id);break;
-    case"closew":{const e=S.edit;if(e.dirty&&e.w.items.length===0&&!e.saved)e.dirty=false;await flush(e);S.edit=null;S.confirm=null;renderSheet();renderView();break}
+    case"closew":{const e=S.edit;if(e.dirty&&e.w.items.length===0&&!e.saved)e.dirty=false;await flush(e);
+      const sum=e.touched&&e.saved&&e.stage!=="start"?summarize(e):null;
+      S.edit=sum&&sum.sets?{kind:"summary",sum}:null;S.confirm=null;renderSheet();renderView();break}
+    case"closesum":S.edit=null;renderSheet();renderView();break;
+    case"filltgt":{const it=S.edit.w.items[+d.i];const co=coachFor(it.ex,S.edit.w);it.sets.forEach((x,j)=>{const t=tgtAt(co,j);if(!t)return;if(x.w===""||x.w==null)x.w=t.w;if(x.r===""||x.r==null)x.r=t.r});rerenderSheetKeepScroll();scheduleSave();break}
     case"addset":{const it=S.edit.w.items[+d.i];const l=it.sets[it.sets.length-1];it.sets.push({w:l?l.w:"",r:""});rerenderSheetKeepScroll();scheduleSave();break}
     case"rmset":S.edit.w.items[+d.i].sets.splice(+d.j,1);rerenderSheetKeepScroll();scheduleSave();break;
     case"rmex":S.edit.w.items.splice(+d.i,1);rerenderSheetKeepScroll();scheduleSave();break;
@@ -772,21 +880,18 @@ document.addEventListener("input",ev=>{
   if(!S.edit)return;
   if(S.edit.kind==="workout"){
     if(el.dataset.f){S.edit.w[el.dataset.f]=el.value;scheduleSave();return}
-    if(el.dataset.k){const s=S.edit.w.items[+el.dataset.i].sets[+el.dataset.j];s[el.dataset.k]=el.value;scheduleSave()}
+    if(el.dataset.k){const s=S.edit.w.items[+el.dataset.i].sets[+el.dataset.j];s[el.dataset.k]=el.value;scheduleSave();refreshMarks(+el.dataset.i)}
   }else{
     if(el.dataset.rf)S.edit.r.name=el.value;
     if(el.dataset.ri!=null)S.edit.r.items[+el.dataset.ri].sets=Math.max(1,Math.min(20,parseInt(el.value)||1));
   }
 });
-/* Finishing a reps box redraws the workout (to show PR badges). If that happens while a finger is
-   on a button (e.g. tapping Done right after typing), wait until the tap is finished so it isn't lost. */
-let ptrDown=false,pendingRedraw=false;
-document.addEventListener("pointerdown",()=>{ptrDown=true},true);
-document.addEventListener("pointerup",()=>setTimeout(()=>{ptrDown=false;if(pendingRedraw){pendingRedraw=false;if(S.edit?.kind==="workout")rerenderSheetKeepScroll()}},0),true);
-document.addEventListener("pointercancel",()=>{ptrDown=false},true);
 document.addEventListener("change",ev=>{
   if(ev.target.id==="imp-file"&&ev.target.files[0]){readImport(ev.target.files[0]);return}
-  if(S.edit?.kind==="workout"&&ev.target.dataset.k==="r"){if(ptrDown)pendingRedraw=true;else rerenderSheetKeepScroll()}
+  if(ev.target.dataset.xs){const ex=ev.target.dataset.ex,k=ev.target.dataset.xs;const all=S.profile.exSettings=S.profile.exSettings||{};const cur=all[ex]=all[ex]||{};
+    const v=k==="inc"?num(ev.target.value):parseInt(ev.target.value);if(v>0)cur[k]=v;else delete cur[k];
+    if(cur.min&&cur.max&&cur.min>cur.max)[cur.min,cur.max]=[cur.max,cur.min];
+    saveProfile();if(S.edit?.kind==="workout")rerenderSheetKeepScroll();return}
 });
 document.addEventListener("submit",async ev=>{
   ev.preventDefault();const f=ev.target;
@@ -838,7 +943,7 @@ render();
   try{S.lastExport=await Local.get("meta","lastExport")}catch(e){}
   let got=0;const ready=()=>{if(++got>=2&&S.status==="loading"){S.status="ok";render()}};
   const onErr=()=>{toast("Couldn't read saved data on this phone.")};
-  S.pref.onSnapshot(s=>{if(s.exists){const d=s.data();S.profile={routines:d.routines||[],custom:d.custom||[],units:d.units||"lb"}}ready();if(S.status==="ok"&&!S.edit)render()},onErr);
+  S.pref.onSnapshot(s=>{if(s.exists){const d=s.data();S.profile={routines:d.routines||[],custom:d.custom||[],units:d.units||"lb",exSettings:d.exSettings||{}}}ready();if(S.status==="ok"&&!S.edit)render()},onErr);
   S.wcol.orderBy("date","desc").limit(1000).onSnapshot(q=>{S.workouts=q.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.date===b.date?(b.created||0)-(a.created||0):(a.date<b.date?1:-1));ready();if(S.status==="ok")renderView()},onErr);
   S.scol.onSnapshot(q=>{S.stats=q.docs.map(d=>d.data());if(S.status==="ok")renderView()},onErr);
   S.phcol.onSnapshot(async q=>{
