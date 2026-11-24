@@ -33,6 +33,11 @@ The app is called **SetRep** (written with a capital R). It was previously calle
 - Backup button (top right) exports one JSON file with everything, photos included, and imports it back
   (import replaces all data). This is how data moves from the web version into the Android app later.
 - The repo is public: never commit personal data, backups or photos.
+- Muscle map: the body shapes come from `tools/muscle-map/source.png`, a color-coded chart (one flat color per
+  muscle group, made with ChatGPT). `tools/muscle-map/trace.py source.png out.js` traces it into the
+  `BODY_VIEWS` block in `index.html` (front/back: outline, skin areas, muscle regions, detail lines).
+  To change the body, make a new chart with the same colors and re-run the tracer. The dark "sculpted"
+  look (shading, glow, heat colors) is all CSS/SVG styling in `index.html`, separate from the shapes.
 
 ## The plan (Android app, later)
 - Capacitor app shell around the web app.
