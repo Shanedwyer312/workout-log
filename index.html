@@ -84,10 +84,10 @@ label{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600;
 .weekbar{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .weekbar .lbl{text-align:center}
 .weekbar .lbl strong{display:block;font-family:var(--f-display);font-size:20px;text-transform:uppercase;letter-spacing:.03em}
-.bodies{display:grid;grid-template-columns:1fr 1fr;gap:4px;align-items:end}
+.bodies{display:grid;grid-template-columns:1fr 1fr;gap:0;align-items:end}
 .bodies figure{margin:0;text-align:center}
 .bodies figcaption{font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:#7d8794;margin-top:4px}
-.bodies svg{width:100%;max-width:230px;height:auto;display:block;margin:0 auto;overflow:visible}
+.bodies svg{width:100%;max-width:300px;height:auto;display:block;margin:0 auto;overflow:visible}
 .bodypanel{border-radius:var(--r);background:radial-gradient(ellipse 70% 55% at 50% 40%,#262c35 0%,#15181d 60%,#0d0f12 100%);padding:14px 4px 10px;border:1px solid #000;box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
 .sil{fill:#22262d;stroke:none}
 .skin{fill:url(#skin);stroke:none}
@@ -259,26 +259,28 @@ L("sideplank","Side Plank",["obliques"],["abs"]),
 L("backext","Back Extension",["lower_back"],["glutes","hamstrings"])
 ];
 
-/* Body regions: realistic muscular male, 8 heads tall (head = ~51 units; chin 61, nipples 112, navel 164,
-   crotch 218, knee 292, ankle 396, sole 422). Left half drawn once, mirrored across x=110.
+/* Body regions: realistic muscular male, 8 heads tall, in a double-biceps pose
+   (front view = front double biceps, back view = back double biceps).
+   Head ~51 units; navel 164, crotch 218, knee 292, ankle 396, sole 422. Left half drawn once, mirrored across x=110.
    Each entry: [muscle key, path, fiber angle]. Later entries draw on top of earlier ones. */
-const SIL_BODY="C102 17 96 23 96 34 C96 41 96 47 98 51 C99 55 100 58 100 61 C100 65 98 68 95 71 C88 74 80 76 72 78 C62 80 54 86 52 96 C51 104 50 110 48 116 C47 126 47 140 48 150 C49 156 50 160 51 164 C49 176 49 190 51 202 C53 210 54 216 55 222 C54 228 54 238 56 245 C57 250 60 252 63 250 C65 245 65 236 65 228 C65 226 64 224 64 222 C63 208 62 194 62 180 C62 172 62 168 62 164 C64 152 66 136 66 120 C66 112 67 106 68 102 C68 112 68 124 70 136 C72 148 76 158 79 168 C80 178 79 188 77 196 C75 204 73 210 73 218 C71 232 71 248 73 262 C75 276 80 286 84 292 C85 298 84 304 83 310 C80 320 79 332 81 344 C83 360 87 378 89 394 C88 402 86 410 86 416 C86 420 90 422 96 422 C100 422 103 420 103 416 C103 410 101 404 100 398 C101 386 103 370 104 356 C105 342 105 330 103 320 C102 312 101 306 101 300 C102 290 103 280 104 268 C106 250 108 234 110 222";
+const SIL_BODY="C102 17 96 23 96 34 C96 41 96 47 98 51 C99 55 100 58 100 61 C100 65 98 68 95 71 C90 72 84 72 78 72 C72 72 64 72 58 76 C54 70 48 62 42 61 C37 60 34 64 34 70 C33 62 34 54 35 48 C36 44 37 41 37 38 C38 32 36 25 30 23 C25 22 20 25 20 31 C20 35 21 38 22 41 C20 52 17 64 16 74 C15 82 16 88 20 92 C28 98 38 100 48 100 C54 100 58 102 62 106 C64 107 66 107 68 106 C66 116 67 128 70 138 C73 150 77 160 79 168 C80 178 79 188 77 196 C75 204 73 210 73 218 C70 232 69 248 71 262 C73 276 78 286 84 292 C85 298 84 304 83 310 C78 320 77 332 79 344 C82 360 87 378 89 394 C88 402 86 410 86 416 C86 420 90 422 96 422 C100 422 103 420 103 416 C103 410 101 404 100 398 C101 386 103 370 104 356 C105 342 105 330 103 320 C102 312 101 306 101 300 C102 290 103 280 104 268 C106 250 108 234 110 222";
 const SIL="M110 17 "+SIL_BODY+" Z";
 const OUTLINE="M110 17 "+SIL_BODY;
-const FOREARMS=[
-["forearms","M58 164 C56 176 54 190 53 204 C53 212 54 218 55 222 L64 222 C63 208 62 194 62 180 C62 172 62 168 62 164 C61 162 59 162 58 164 Z",90],
-["forearms","M51 164 C49 176 49 190 51 202 C53 192 55 182 58 172 C59 168 59 166 58 164 C56 162 53 162 51 164 Z",90]
+/* the raised arm: biceps peak on top, triceps underneath, forearm rising to the fist */
+const ARM=[
+["triceps","M61 94 C56 92 50 90 44 88 C38 84 34 78 34 72 L33 72 C28 78 22 84 19 91 C26 97 36 100 48 100 C54 100 58 102 62 106 Z",0],
+["biceps","M58 77 C54 70 48 62 42 61 C37 60 34 64 34 70 C36 78 42 86 50 90 C54 92 58 93 61 94 Z",0],
+["forearms","M28 74 C28 62 29 50 30 39 L22 41 C20 52 17 64 16 74 C15 82 16 88 20 92 C24 86 26 80 28 74 Z",90],
+["forearms","M34 70 C33 62 34 54 35 48 C36 44 37 41 37 38 L30 39 C29 50 28 62 28 74 C30 78 33 76 34 70 Z",90]
 ];
 const FRONT=[
-["traps","M100 63 C100 66 98 69 95 71 C88 74 80 76 72 78 L75 79 C84 78 94 76 104 73 C102 70 101 66 100 63 Z",0],
+["traps","M100 63 C100 66 98 69 95 71 C90 72 84 72 78 72 L80 74 C88 74 96 74 104 73 C102 70 101 66 100 63 Z",0],
 ["chest","M109 74 C100 74 90 76 81 80 C78 86 75 92 72 97 C84 93 98 92 109 94 Z",-30],
-["chest","M109 94 C98 92 84 93 72 97 C70 99 69 101 68 103 C72 112 80 120 90 124 C98 127 105 126 109 124 Z",0],
-["lats","M68 103 C68 112 68 124 70 136 C70 126 70 114 69 106 Z",90],
-["side_delts","M72 78 C62 80 54 86 52 96 C51 104 50 110 48 116 C50 120 52 123 54 124 C56 110 59 98 63 90 C66 84 69 80 72 78 Z",60],
-["front_delts","M72 78 C69 80 66 84 63 90 C59 98 56 110 54 124 C60 121 65 116 68 110 C71 104 73 98 75 92 C77 87 79 83 81 80 C78 78 75 78 72 78 Z",60],
-["triceps","M48 118 C47 130 47 142 48 150 C49 146 50 136 51 124 Z",90],
-["biceps","M54 125 C59 121 63 117 66 112 C66 124 65 140 63 152 C61 160 57 162 54 160 C51 152 49 138 52 124 Z",90],
-...FOREARMS,
+["chest","M109 94 C98 92 84 93 72 97 C70 100 69 103 68 106 C72 114 80 120 90 124 C98 127 105 126 109 124 Z",0],
+["lats","M68 106 C66 116 67 128 70 138 C71 126 70 116 69 108 Z",90],
+...ARM,
+["side_delts","M80 72 C72 72 64 72 58 76 C56 84 57 94 61 102 C66 96 72 90 76 84 C79 80 81 76 80 72 Z",60],
+["front_delts","M80 72 C82 76 81 80 78 84 C74 90 68 96 61 102 C63 105 66 107 68 106 C72 102 77 96 80 90 C82 86 84 80 84 75 C83 73 82 72 80 72 Z",60],
 ["obliques","M70 114 C74 115 78 118 81 121 C78 123 74 122 71 120 Z",-30],
 ["obliques","M71 123 C75 124 79 127 82 130 C79 132 75 131 72 129 Z",-30],
 ["obliques","M72 132 C76 133 80 136 83 139 C80 141 76 140 73 138 Z",-30],
@@ -288,31 +290,29 @@ const FRONT=[
 ["abs","M109 162 L97 162 C96 167 96 171 97 176 L109 176 Z",90],
 ["abs","M109 179 L97 179 C97 194 101 206 109 214 Z",90],
 ["adductors","M95 214 C98 226 99 242 99 258 C102 250 104 240 106 230 C107 226 108 222 108 220 C104 216 99 214 95 214 Z",60],
-["quads","M76 212 C72 228 71 248 73 262 C75 276 80 286 85 292 C87 284 87 272 86 260 C85 244 85 228 84 214 C82 210 79 209 76 212 Z",90],
+["quads","M76 212 C71 228 69 248 71 262 C73 276 78 286 85 292 C87 284 87 272 86 260 C85 244 85 228 84 214 C82 210 79 209 76 212 Z",90],
 ["quads","M86 210 C87 228 88 246 89 262 C90 274 92 282 95 286 C98 280 99 270 99 258 C99 240 97 224 94 214 C92 208 88 207 86 210 Z",90],
 ["quads","M99 262 C102 270 104 280 103 290 C101 297 96 298 93 292 C96 286 98 276 99 262 Z",60],
-["calves","M83 308 C80 318 79 330 81 344 C83 354 85 362 87 368 C88 352 89 336 89 320 C88 312 86 307 83 308 Z",90],
+["calves","M83 308 C79 318 78 330 80 344 C82 354 85 362 87 368 C88 352 89 336 89 320 C88 312 86 307 83 308 Z",90],
 ["calves","M90 306 C90 326 90 348 91 370 C92 380 92 388 93 392 L97 392 C97 376 97 354 97 334 C97 322 96 312 95 306 C93 304 91 304 90 306 Z",90],
 ["calves","M98 304 C102 312 105 326 105 342 C105 356 103 366 101 376 C100 362 99 348 99 334 C99 322 98 312 98 304 Z",90]
 ];
 const BACK=[
-["upper_back","M77 80 C86 84 96 90 104 98 L109 102 L109 146 C100 136 88 128 76 122 C72 118 69 112 68 106 C70 102 74 98 78 96 C79 92 79 86 77 80 Z",-30],
-["lats","M68 104 C68 112 68 124 70 136 C72 148 76 158 79 168 C80 176 80 182 80 188 C90 186 100 182 109 178 L109 146 C100 136 88 128 76 122 C72 118 69 112 68 104 Z",60],
-["traps","M110 56 C105 58 101 60 100 63 C100 66 98 69 95 71 C88 74 80 76 72 78 C82 82 92 88 98 98 C103 108 106 124 109 146 L110 146 Z",30],
-["rear_delts","M72 78 C62 80 54 86 52 96 C51 104 50 110 48 116 C50 120 52 123 54 124 C60 112 68 102 78 96 C79 92 79 86 77 80 Z",-30],
-["triceps","M48 116 C47 126 47 138 48 150 C52 154 56 152 57 146 C57 134 58 124 59 116 C55 113 51 113 48 116 Z",90],
-["triceps","M60 116 C59 126 58 138 59 148 C61 154 64 152 65 146 C66 136 66 124 66 112 C64 112 62 113 60 116 Z",90],
-...FOREARMS,
+["upper_back","M80 74 C88 82 96 92 104 100 L109 102 L109 146 C100 136 88 128 76 122 C72 118 69 112 68 108 C72 102 76 98 80 94 C82 86 82 78 80 74 Z",-30],
+["lats","M68 108 C66 116 67 128 70 138 C73 150 77 160 79 168 C80 176 80 182 80 188 C90 186 100 182 109 178 L109 146 C100 136 88 128 76 122 C72 118 69 112 68 108 Z",60],
+["traps","M110 56 C105 58 101 60 100 63 C100 66 98 69 95 71 C90 72 84 72 78 72 C86 80 94 90 99 100 C104 112 107 128 109 146 L110 146 Z",30],
+...ARM,
+["rear_delts","M80 72 C72 72 64 72 58 76 C56 84 57 94 61 102 C63 105 66 107 68 106 C74 100 80 94 82 86 C83 80 82 75 80 72 Z",-30],
 ["lower_back","M109 178 L109 212 C104 210 100 206 98 200 C96 194 96 188 97 184 C101 181 105 179 109 178 Z",90],
 ["obliques","M80 188 C86 187 92 185 97 184 C96 192 97 200 99 205 C94 204 86 202 78 200 C79 196 80 192 80 188 Z",60],
 ["glutes","M78 200 C76 206 74 212 74 218 C80 212 88 208 98 207 C92 204 85 202 78 200 Z",-30],
 ["glutes","M109 210 C100 206 88 208 80 216 C75 226 75 240 80 250 C90 256 102 256 109 252 Z",-30],
-["quads","M73 236 C71 248 72 262 75 274 C78 282 81 288 84 292 C80 280 77 266 77 250 C77 244 76 240 73 236 Z",90],
+["quads","M72 236 C69 248 70 262 73 274 C78 282 81 288 84 292 C80 280 77 266 77 250 C77 244 76 240 73 236 Z",90],
 ["hamstrings","M80 252 C77 264 77 278 80 290 C83 296 87 296 89 290 C90 278 91 264 94 254 C90 251 84 250 80 252 Z",90],
 ["hamstrings","M96 255 C95 268 95 282 97 294 C100 298 103 296 103 290 C104 278 105 264 107 254 C103 252 99 252 96 255 Z",90],
-["calves","M83 300 C79 312 78 326 80 340 C83 350 88 352 91 346 C92 334 92 318 90 302 Z",90],
+["calves","M83 300 C78 312 77 326 79 340 C83 350 88 352 91 346 C92 334 92 318 90 302 Z",90],
 ["calves","M92 302 C94 318 95 334 95 348 C98 354 103 352 104 342 C105 330 104 316 101 304 Z",90],
-["calves","M81 342 C83 356 86 370 88 384 L99 384 C100 372 101 360 102 350 C99 356 95 356 93 350 C90 356 85 354 81 342 Z",90]
+["calves","M80 342 C82 356 86 370 88 384 L99 384 C100 372 101 360 102 350 C99 356 95 356 93 350 C90 356 85 354 81 342 Z",90]
 ];
 const FIB={"-30":"fm30","0":"f0","30":"f30","60":"f60","90":"f90"};
 
@@ -423,7 +423,7 @@ function bodySVG(regions,label){
   const fib=regions.map(([m,d,a])=>`<path class="fib" d="${d}" fill="url(#${FIB[a]})"/>`).join("");
   const vol=regions.map(([m,d])=>`<path class="vol" d="${d}"/><path class="spec" d="${d}"/>`).join("");
   const half=`<path class="sil" d="${SIL}"/><path class="skin" d="${SIL}"/>${paths}${fib}${vol}<path class="outline" d="${OUTLINE}"/>${regions===FRONT?`<path class="detail" d="M98 51 C100 56 104 60 110 61"/>`:""}<path class="detail" d="M96 36 C94 37 94 43 96 45"/>`;
-  return `<svg viewBox="42 10 136 420" role="img" aria-label="${label}"><ellipse cx="110" cy="423" rx="30" ry="4" fill="url(#floor)"/><g>${half}</g><g transform="translate(220 0) scale(-1 1)">${half}</g></svg>`;
+  return `<svg viewBox="12 16 196 414" role="img" aria-label="${label}"><ellipse cx="110" cy="423" rx="30" ry="4" fill="url(#floor)"/><g>${half}</g><g transform="translate(220 0) scale(-1 1)">${half}</g></svg>`;
 }
 const BODY_DEFS=`<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
 ${Object.entries(FIB).map(([a,id])=>`<pattern id="${id}" width="2" height="2" patternUnits="userSpaceOnUse" patternTransform="rotate(${Number(a)+90})"><line x1="0" y1="1" x2="2" y2="1" stroke="#000" stroke-opacity=".16" stroke-width=".5"/></pattern>`).join("")}
