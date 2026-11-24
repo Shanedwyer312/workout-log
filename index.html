@@ -24,7 +24,7 @@
   --bg:#e9ecef; --surface:#ffffff; --raise:#f4f6f8; --fg:#14181d; --muted:#5b6571; --line:#d3d9df;
   --accent:#2452c9; --accent-fg:#ffffff; --accent-soft:#dfe7fb;
   --sil:#d9dee4; --sil-line:#6f7a87; --seam:rgba(40,30,30,.38); --panel:#dde2e8; --panel-hi:#f7f9fb;
-  --h0:#b4bdc8; --h1:#ffc6a6; --h2:#ff8a57; --h3:#ee3f2c; --h4:#b5101d; --ink:#16171c; --burst:rgba(36,82,201,.07);
+  --h0:#58616e; --h1:#6e3328; --h2:#b0452a; --h3:#f3702c; --h4:#ff2d4a; --ink:#16171c; --burst:rgba(36,82,201,.07);
   --good:#1f7a4d; --warn:#b4542a;
   --f-display:"Saira Condensed","Arial Narrow",Impact,sans-serif;
   --f-body:"Figtree",system-ui,-apple-system,"Segoe UI",sans-serif;
@@ -35,13 +35,13 @@
   --bg:#0f1215; --surface:#181c21; --raise:#20252b; --fg:#e6e9ed; --muted:#8e98a4; --line:#2a3038;
   --accent:#7196ff; --accent-fg:#0b1020; --accent-soft:#1d2741;
   --sil:#2a313a; --sil-line:#6a7584; --seam:rgba(0,0,0,.55); --panel:#0c0f12; --panel-hi:#1e252d;
-  --h0:#46505c; --h1:#7a3326; --h2:#c2482c; --h3:#ff5a36; --h4:#ff8a4a; --ink:#030405; --burst:rgba(113,150,255,.07);
+  --h0:#58616e; --h1:#6e3328; --h2:#b0452a; --h3:#f3702c; --h4:#ff2d4a; --ink:#030405; --burst:rgba(113,150,255,.07);
   --good:#5cc994; --warn:#f0925e; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#0f1215; --surface:#181c21; --raise:#20252b; --fg:#e6e9ed; --muted:#8e98a4; --line:#2a3038;
   --accent:#7196ff; --accent-fg:#0b1020; --accent-soft:#1d2741;
   --sil:#2a313a; --sil-line:#6a7584; --seam:rgba(0,0,0,.55); --panel:#0c0f12; --panel-hi:#1e252d;
-  --h0:#46505c; --h1:#7a3326; --h2:#c2482c; --h3:#ff5a36; --h4:#ff8a4a; --ink:#030405; --burst:rgba(113,150,255,.07);
+  --h0:#58616e; --h1:#6e3328; --h2:#b0452a; --h3:#f3702c; --h4:#ff2d4a; --ink:#030405; --burst:rgba(113,150,255,.07);
   --good:#5cc994; --warn:#f0925e; color-scheme:dark}
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15px;line-height:1.45}
@@ -86,18 +86,21 @@ label{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600;
 .weekbar .lbl strong{display:block;font-family:var(--f-display);font-size:20px;text-transform:uppercase;letter-spacing:.03em}
 .bodies{display:grid;grid-template-columns:1fr 1fr;gap:4px;align-items:end}
 .bodies figure{margin:0;text-align:center}
-.bodies figcaption{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-top:2px}
-.bodies svg{width:100%;max-width:220px;height:auto;display:block;margin:0 auto}
-.bodypanel{border-radius:var(--r);background:radial-gradient(ellipse at 50% 38%,var(--panel-hi),var(--panel) 72%);padding:10px 4px 6px;border:1px solid var(--line)}
-.sil{fill:var(--sil);stroke:none}
+.bodies figcaption{font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:#7d8794;margin-top:4px}
+.bodies svg{width:100%;max-width:230px;height:auto;display:block;margin:0 auto;overflow:visible}
+.bodypanel{border-radius:var(--r);background:radial-gradient(ellipse 70% 55% at 50% 40%,#262c35 0%,#15181d 60%,#0d0f12 100%);padding:14px 4px 10px;border:1px solid #000;box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
+.sil{fill:#22262d;stroke:none}
 .skin{fill:url(#skin);stroke:none}
-.fib,.vol,.outline,.skin{pointer-events:none}
+.fib,.vol,.outline,.skin,.spec{pointer-events:none}
 .vol{fill:url(#vol)}
-.fib{opacity:.9}
-.outline{fill:none;stroke:var(--sil-line);stroke-width:1.1;stroke-linejoin:round;stroke-linecap:round}
-.mus{stroke:var(--seam);stroke-width:.7;stroke-linejoin:round;cursor:pointer;transition:fill .25s}
-.l0{fill:var(--h0)}.l1{fill:var(--h1)}.l2{fill:var(--h2)}.l3{fill:var(--h3)}.l4{fill:var(--h4)}
-.mus.sel{stroke:var(--accent);stroke-width:1.8}
+.spec{fill:url(#spec)}
+.fib{opacity:.55}
+.outline{fill:none;stroke:rgba(150,175,205,.28);stroke-width:1;stroke-linejoin:round;stroke-linecap:round}
+.mus{stroke:#0b0d10;stroke-width:1.1;stroke-linejoin:round;cursor:pointer;transition:fill .35s,filter .35s}
+.l0{fill:var(--h0)}.l1{fill:var(--h1)}.l2{fill:var(--h2)}
+.l3{fill:var(--h3);filter:drop-shadow(0 0 2.5px rgba(255,130,50,.5))}
+.l4{fill:var(--h4);filter:drop-shadow(0 0 4px rgba(255,40,70,.8))}
+.mus.sel{stroke:#fff;stroke-width:1.6}
 .legend{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
 .legend span{display:inline-flex;align-items:center;gap:4px}
 .legend i{width:14px;height:14px;border-radius:3px;display:inline-block}
@@ -417,14 +420,16 @@ function toast(msg){const t=$("#toast");t.textContent=msg;t.hidden=false;clearTi
 function bodySVG(regions,label){
   const paths=regions.map(([m,d])=>`<path class="mus l0" data-m="${m}" d="${d}"><title>${MUSCLES[m]}</title></path>`).join("");
   const fib=regions.map(([m,d,a])=>`<path class="fib" d="${d}" fill="url(#${FIB[a]})"/>`).join("");
-  const vol=regions.map(([m,d])=>`<path class="vol" d="${d}"/>`).join("");
+  const vol=regions.map(([m,d])=>`<path class="vol" d="${d}"/><path class="spec" d="${d}"/>`).join("");
   const half=`<path class="sil" d="${SIL}"/><path class="skin" d="${SIL}"/>${paths}${fib}${vol}<path class="outline" d="${OUTLINE}"/>`;
-  return `<svg viewBox="28 6 164 422" role="img" aria-label="${label}"><g>${half}</g><g transform="translate(220 0) scale(-1 1)">${half}</g></svg>`;
+  return `<svg viewBox="28 6 164 422" role="img" aria-label="${label}"><ellipse cx="110" cy="424" rx="44" ry="5" fill="url(#floor)"/><g>${half}</g><g transform="translate(220 0) scale(-1 1)">${half}</g></svg>`;
 }
 const BODY_DEFS=`<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
-${Object.entries(FIB).map(([a,id])=>`<pattern id="${id}" width="2.2" height="2.2" patternUnits="userSpaceOnUse" patternTransform="rotate(${Number(a)+90})"><line x1="0" y1="1.1" x2="2.2" y2="1.1" stroke="#000" stroke-opacity=".10" stroke-width=".45"/><line x1="0" y1=".2" x2="2.2" y2=".2" stroke="#fff" stroke-opacity=".10" stroke-width=".35"/></pattern>`).join("")}
-<radialGradient id="vol" cx=".4" cy=".34" r=".78" fx=".36" fy=".28"><stop offset="0" stop-color="#fff" stop-opacity=".42"/><stop offset=".38" stop-color="#fff" stop-opacity=".06"/><stop offset=".72" stop-color="#000" stop-opacity=".06"/><stop offset="1" stop-color="#000" stop-opacity=".34"/></radialGradient>
-<linearGradient id="skin" gradientUnits="userSpaceOnUse" x1="38" y1="0" x2="110" y2="0"><stop offset="0" stop-color="#000" stop-opacity=".22"/><stop offset=".35" stop-color="#000" stop-opacity=".06"/><stop offset=".8" stop-color="#fff" stop-opacity=".10"/><stop offset="1" stop-color="#000" stop-opacity=".04"/></linearGradient>
+${Object.entries(FIB).map(([a,id])=>`<pattern id="${id}" width="2" height="2" patternUnits="userSpaceOnUse" patternTransform="rotate(${Number(a)+90})"><line x1="0" y1="1" x2="2" y2="1" stroke="#000" stroke-opacity=".16" stroke-width=".5"/></pattern>`).join("")}
+<radialGradient id="vol" cx=".45" cy=".4" r=".72"><stop offset="0" stop-color="#000" stop-opacity="0"/><stop offset=".55" stop-color="#000" stop-opacity=".05"/><stop offset=".85" stop-color="#000" stop-opacity=".28"/><stop offset="1" stop-color="#000" stop-opacity=".55"/></radialGradient>
+<radialGradient id="spec" cx=".34" cy=".26" r=".42"><stop offset="0" stop-color="#fff" stop-opacity=".38"/><stop offset=".45" stop-color="#fff" stop-opacity=".10"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+<linearGradient id="skin" gradientUnits="userSpaceOnUse" x1="36" y1="0" x2="110" y2="0"><stop offset="0" stop-color="#9fc0e6" stop-opacity=".16"/><stop offset=".08" stop-color="#000" stop-opacity=".25"/><stop offset=".6" stop-color="#fff" stop-opacity=".03"/><stop offset="1" stop-color="#fff" stop-opacity=".07"/></linearGradient>
+<radialGradient id="floor"><stop offset="0" stop-color="#000" stop-opacity=".6"/><stop offset="1" stop-color="#000" stop-opacity="0"/></radialGradient>
 </defs></svg>`;
 function weekRange(off){const s=addDays(monday(new Date()),off*7);return[ymd(s),ymd(addDays(s,6)),s]}
 function muscleLoad(ws){
