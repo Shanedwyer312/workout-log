@@ -58,3 +58,5 @@ on-device storage (IndexedDB) plus Export/Import, and it now works fully offline
 - Keep explanations plain.
 - Push changes straight to this repo. Don't hand over files to copy and paste.
 - Test changes in a real browser before pushing (pushes go live on his phone right away).
+- Bump `APP_VERSION` in `index.html` on every push (shown at the bottom of the Backup screen) so Shane can
+  confirm his phone has the latest version.

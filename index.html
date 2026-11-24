@@ -606,6 +606,9 @@ function sheetHistory(){
   </div></div></div>`;
 }
 
+/* ---------- version (shown in Backup) — bump on every push ---------- */
+const APP_VERSION="2026-11-24.2";
+
 /* ---------- backup ---------- */
 function sheetBackup(){
   const p=S.pendingImport;
@@ -627,6 +630,7 @@ function sheetBackup(){
     :`<div class="muted" style="font-size:14px">Restore from a backup file made with Export.</div>
       <label>Backup file<input type="file" id="imp-file" accept=".json,application/json"></label>`}
   </div>
+  <div class="muted num" style="font-size:12px;text-align:center">SetRep version ${APP_VERSION}</div>
   </div></div></div>`;
 }
 const blobToDataURL=b=>new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=()=>rej(r.error);r.readAsDataURL(b)});

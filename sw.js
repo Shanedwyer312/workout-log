@@ -2,7 +2,7 @@
    Keeps a copy of the app on the phone. When online, it always fetches the newest version
    (so updates show up right away) and refreshes the saved copy; when offline, it uses the saved copy.
    Your workout data is NOT stored here — that lives in the app's on-device database. */
-const CACHE = "setrep-v1";
+const CACHE = "setrep-v2";
 const FILES = [
   "./",
   "index.html",
@@ -36,8 +36,10 @@ self.addEventListener("activate", e => {
 self.addEventListener("fetch", e => {
   const req = e.request;
   if (req.method !== "GET" || new URL(req.url).origin !== location.origin) return;
+  // "no-cache" = always ask GitHub whether there's a newer copy (cheap if nothing changed),
+  // instead of trusting the browser's 10-minute copy. Offline falls back to the saved copy.
   e.respondWith(
-    fetch(req)
+    fetch(req, { cache: "no-cache" })
       .then(res => {
         if (res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)); }
         return res;
