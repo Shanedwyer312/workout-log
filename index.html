@@ -536,7 +536,7 @@ function itemHTML(it,i,w){
   return `<div class="ex">
   <div class="ex-h"><div class="stack" style="gap:2px;min-width:0"><button class="ex-name" data-act="hist" data-ex="${it.ex}">${esc(exName(it.ex))}</button>
   <span class="last">${prev?`Last (${fmtShort(prev.date)}): <span class="num">${prev.sets.map(s=>`${fmtN(s.w)}×${s.r}`).join(", ")}</span>`:"First time logging this"}</span></div>
-  <button class="x" data-act="rmex" data-i="${i}" aria-label="Remove exercise">×</button></div>
+  <div class="row" style="gap:2px;flex-wrap:nowrap">${i>0?`<button class="x" data-act="upex" data-i="${i}" aria-label="Move up" title="Move up">↑</button>`:""}<button class="x" data-act="swapex" data-i="${i}" aria-label="Swap exercise" title="Swap exercise">⇄</button><button class="x" data-act="rmex" data-i="${i}" aria-label="Remove exercise" title="Remove">×</button></div></div>
   <div class="sets"><span class="hd">Set</span><span class="hd">${U()}</span><span class="hd">Reps</span><span></span><span></span>
   ${it.sets.map((s,j)=>{const ps=prev?.sets[j]||prev?.sets[prev.sets.length-1];const pr=best>0&&e1rm(s.w,s.r)>best;return `<span class="sn">${j+1}</span>
   <input id="s-${i}-${j}-w" inputmode="decimal" data-i="${i}" data-j="${j}" data-k="w" value="${s.w??""}" placeholder="${ps?fmtN(ps.w):""}" aria-label="Set ${j+1} weight">
@@ -544,13 +544,24 @@ function itemHTML(it,i,w){
   <span>${pr?`<span class="chip pr">PR</span>`:""}</span><button class="x" data-act="rmset" data-i="${i}" data-j="${j}" aria-label="Remove set">×</button>`}).join("")}</div>
   <button class="btn quiet sm" data-act="addset" data-i="${i}">+ Set</button></div>`;
 }
+function startStepHTML(){
+  const rs=S.profile.routines||[];
+  return `<div class="stack" style="gap:10px">
+    <div class="eyebrow">Start from a routine</div>
+    ${rs.length?`<div class="list" style="gap:8px">${rs.map(r=>`<button class="pick" data-act="applyr" data-id="${r.id}" style="flex-direction:column;align-items:flex-start;gap:4px;padding:12px 14px"><strong style="font-size:16px">${esc(r.name)}</strong><small>${(r.items||[]).map(i=>`${esc(exName(i.ex))} ${i.sets}×`).join(" · ")||"No exercises yet"}</small></button>`).join("")}</div>`
+    :`<div class="muted" style="font-size:14px">No routines saved yet. Build them in the Routines tab and they'll show up here.</div>`}
+  </div>
+  <div class="row" style="gap:10px;color:var(--muted);font-size:12px;font-weight:700;letter-spacing:.1em"><span style="flex:1;height:1px;background:var(--line)"></span>OR<span style="flex:1;height:1px;background:var(--line)"></span></div>
+  <button class="btn ghost wide" data-act="blankstart">Add exercises one by one</button>`;
+}
 function sheetWorkout(){
-  const w=S.edit.w;
-  return `<div class="sheet"><header class="sh-h"><button class="txt" data-act="closew">Done</button><h2>Workout</h2><span class="saving" id="savestate">${S.saveState}</span></header>
+  const w=S.edit.w;const start=S.edit.stage==="start";
+  return `<div class="sheet"><header class="sh-h"><button class="txt" data-act="closew">${start?"Cancel":"Done"}</button><h2>${start?"New workout":"Workout"}</h2>${start?`<span class="saving"></span>`:`<span class="saving" id="savestate">${S.saveState}</span>`}</header>
   <div class="sh-b"><div class="inner">
-  <div class="grid2"><label>Name<input id="w-name" data-f="name" value="${esc(w.name)}"></label><label>Date<input id="w-date" type="date" data-f="date" value="${w.date}"></label></div>
+  <div class="grid2"><label>Date<input id="w-date" type="date" data-f="date" value="${w.date}"></label><label>Name<input id="w-name" data-f="name" value="${esc(w.name)}"></label></div>
+  ${start?startStepHTML():`
   ${w.items.map((it,i)=>itemHTML(it,i,w)).join("")}
-  <button class="btn ghost wide" data-act="pick">+ Add exercise</button>
+  <button class="btn ghost wide" data-act="pick">+ Add exercise</button>`}
   <div class="confirm">${S.confirm==="w"?`<span>Delete this workout?</span><button class="btn danger sm" data-act="delw">Delete</button><button class="txt" data-act="ask" data-k="">Cancel</button>`:(S.edit.saved?`<button class="txt" style="color:var(--warn)" data-act="ask" data-k="w">Delete workout</button>`:"")}</div>
   </div></div></div>`;
 }
@@ -569,7 +580,7 @@ function sheetPicker(){
   const p=S.layer;const q=(p.q||"").toLowerCase();
   const all=LIB.concat(S.profile.custom||[]);
   const list=all.filter(e=>(!q||e.name.toLowerCase().includes(q))&&(!p.m||e.p.includes(p.m)||e.s.includes(p.m)));
-  return `<div class="sheet top2"><header class="sh-h"><button class="txt" data-act="closel">Back</button><h2>Add exercise</h2><span style="width:48px"></span></header>
+  return `<div class="sheet top2"><header class="sh-h"><button class="txt" data-act="closel">Back</button><h2>${p.swap!=null?"Swap exercise":"Add exercise"}</h2><span style="width:48px"></span></header>
   <div class="sh-b"><div class="inner">
   <input id="pk-q" placeholder="Search exercises" value="${esc(p.q||"")}" autocomplete="off">
   <div class="chips"><button class="chip ${!p.m?"on":""}" data-act="pkm" data-m="">All</button>${Object.keys(MUSCLES).map(m=>`<button class="chip ${p.m===m?"on":""}" data-act="pkm" data-m="${m}">${MUSCLES[m]}</button>`).join("")}</div>
@@ -680,6 +691,7 @@ function scheduleSave(){if(!S.edit||S.edit.kind!=="workout")return;S.edit.dirty=
 function flush(e=S.edit){
   clearTimeout(saveTimer);
   if(!e||e.kind!=="workout"||!e.dirty)return saving||Promise.resolve();
+  if(!e.saved&&e.w.items.length===0)return saving||Promise.resolve();
   if(saving){again=e;return saving}
   e.dirty=false;setSave("Saving…");
   saving=S.wcol.doc(e.id).set(cleanW(e.w)).then(()=>{e.saved=true;if(S.edit===e)setSave("Saved")})
@@ -694,9 +706,10 @@ function saveProfile(){const body=JSON.parse(JSON.stringify(S.profile));profQ=pr
 function newWorkout(r){
   const items=r?(r.items||[]).map(i=>({ex:i.ex,sets:Array.from({length:Math.max(1,i.sets||3)},()=>({w:"",r:""}))})):[];
   const id=S.wcol.doc().id;
-  S.edit={kind:"workout",id,w:{name:r?r.name:"Workout",date:ymd(new Date()),created:Date.now(),items},dirty:items.length>0,saved:false};
+  S.edit={kind:"workout",id,w:{name:r?r.name:"Workout",date:ymd(new Date()),created:Date.now(),items},dirty:items.length>0,saved:false,stage:r?null:"start"};
   S.confirm=null;S.saveState="";renderSheet();if(items.length)scheduleSave();
 }
+function routineItems(r){return(r.items||[]).map(i=>({ex:i.ex,sets:Array.from({length:Math.max(1,i.sets||3)},()=>({w:"",r:""}))}))}
 function openWorkout(id){const w=S.workouts.find(x=>x.id===id);if(!w)return;S.edit={kind:"workout",id,w:JSON.parse(JSON.stringify({name:w.name,date:w.date,created:w.created,items:w.items||[]})),saved:true};S.edit.w.items.forEach(it=>it.sets.forEach(s=>{if(s.w==null)s.w="";if(s.r==null)s.r=""}));S.confirm=null;S.saveState="Saved";renderSheet()}
 function rerenderSheetKeepScroll(){const b=document.querySelector("#sheet .sh-b");const y=b?b.scrollTop:0;renderSheet();const nb=document.querySelector("#sheet .sh-b");if(nb)nb.scrollTop=y}
 
@@ -722,9 +735,14 @@ document.addEventListener("click",async ev=>{
     case"rmex":S.edit.w.items.splice(+d.i,1);rerenderSheetKeepScroll();scheduleSave();break;
     case"ask":S.confirm=d.k||null;if(S.edit)rerenderSheetKeepScroll();else renderView();break;
     case"delw":{const id=S.edit.id;clearTimeout(saveTimer);S.edit.dirty=false;await saving;try{await S.wcol.doc(id).delete();S.edit=null;S.confirm=null;renderSheet();toast("Workout deleted")}catch(e){toast("Couldn't delete. Try again.")}break}
+    case"applyr":{const r=(S.profile.routines||[]).find(x=>x.id===d.id);if(!r)break;const w=S.edit.w;w.items=routineItems(r);if(!w.name||w.name==="Workout")w.name=r.name;S.edit.stage=null;renderSheet();scheduleSave();break}
+    case"blankstart":S.edit.stage=null;renderSheet();S.layer={kind:"pick",q:"",m:""};renderLayer();break;
+    case"upex":{const it=S.edit.w.items;const i=+d.i;[it[i-1],it[i]]=[it[i],it[i-1]];rerenderSheetKeepScroll();scheduleSave();break}
+    case"swapex":S.layer={kind:"pick",q:"",m:"",swap:+d.i};renderLayer();break;
     case"pick":S.layer={kind:"pick",q:"",m:""};renderLayer();setTimeout(()=>$("#pk-q")?.focus(),50);break;
     case"pkm":S.layer.m=d.m;renderLayer();break;
-    case"pickex":{if(S.edit.kind==="workout"){const prev=prevFor(d.ex,S.edit.w);S.edit.w.items.push({ex:d.ex,sets:Array.from({length:prev?prev.sets.length:3},()=>({w:"",r:""}))});scheduleSave()}else S.edit.r.items.push({ex:d.ex,sets:3});S.layer=null;renderLayer();rerenderSheetKeepScroll();const b=document.querySelector("#sheet .sh-b");if(b)b.scrollTop=b.scrollHeight;break}
+    case"pickex":{if(S.edit.kind==="workout"&&S.layer&&S.layer.swap!=null){S.edit.w.items[S.layer.swap].ex=d.ex;scheduleSave();S.layer=null;renderLayer();rerenderSheetKeepScroll();break}
+      if(S.edit.kind==="workout"){const prev=prevFor(d.ex,S.edit.w);S.edit.w.items.push({ex:d.ex,sets:Array.from({length:prev?prev.sets.length:3},()=>({w:"",r:""}))});scheduleSave()}else S.edit.r.items.push({ex:d.ex,sets:3});S.layer=null;renderLayer();rerenderSheetKeepScroll();const b=document.querySelector("#sheet .sh-b");if(b)b.scrollTop=b.scrollHeight;break}
     case"hist":S.layer={kind:"hist",ex:d.ex};renderLayer();break;
     case"closel":S.layer=null;renderLayer();break;
     case"newr":S.edit={kind:"routine",isNew:true,r:{id:"r"+Date.now().toString(36),name:"",items:[]}};S.confirm=null;renderSheet();break;
