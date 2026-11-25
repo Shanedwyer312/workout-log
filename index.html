@@ -267,8 +267,47 @@ L("plank","Plank",["abs"],["obliques"]),
 L("abwheel","Ab Wheel Rollout",["abs"],["obliques","lats"]),
 L("twist","Russian Twist",["obliques"],["abs"]),
 L("sideplank","Side Plank",["obliques"],["abs"]),
-L("backext","Back Extension",["lower_back"],["glutes","hamstrings"])
+L("backext","Back Extension",["lower_back"],["glutes","hamstrings"]),
+L("mshoulder","Machine Shoulder Press",["front_delts"],["side_delts","triceps"]),
+L("mshrug","Machine Shrug",["traps"],["forearms"]),
+L("smithuprow","Smith Upright Row",["side_delts","traps"],["front_delts","biceps"]),
+L("revpec","Reverse Pec Deck",["rear_delts"],["upper_back"]),
+L("declcrunch","Decline Weighted Crunch",["abs"],["obliques"]),
+L("ffess","Front-Foot-Elevated Split Squat",["quads","glutes"],["adductors"]),
+L("lpcalf","Leg Press Calf Raise",["calves"],[]),
+L("hkr","Hanging Knee Raise",["abs"],["forearms"])
 ];
+/* Custom exercises that now have a built-in version. On startup (and after an import) any custom exercise
+   whose name matches is merged into the built-in one: its workouts, routines and settings move over. */
+const LIB_ALIASES={mshoulder:["machine shoulder press","shoulder press machine","machine overhead press"],
+  mshrug:["machine shrugs","machine shrug","shrug machine"],
+  smithuprow:["upright row (smith)","smith upright row","smith machine upright row"],
+  revpec:["reverse pec deck","reverse pec dec","reverse fly machine","rear delt machine"],
+  declcrunch:["decline weighted crunch","weighted decline crunch","decline crunch"],
+  ffess:["ffe split squat","front foot elevated split squat","front-foot-elevated split squat"],
+  lpcalf:["calf raise on leg press","leg press calf raise","calf press on leg press","calf press"],
+  hkr:["hanging knee raise","hanging knee raises","hanging knee tuck"]};
+const normName=n=>String(n||"").toLowerCase().replace(/[^a-z0-9]/g,"");
+function mergeCore(prof,workoutRows){
+  if(!prof||!(prof.custom||[]).length)return null;
+  const byName={};Object.entries(LIB_ALIASES).forEach(([id,names])=>names.forEach(n=>byName[normName(n)]=id));
+  const move={};prof.custom.forEach(c=>{const id=byName[normName(c.name)];if(id)move[c.id]=id});
+  if(!Object.keys(move).length)return null;
+  const fix=items=>(items||[]).forEach(it=>{if(move[it.ex])it.ex=move[it.ex]});
+  prof.custom=prof.custom.filter(c=>!move[c.id]);
+  (prof.routines||[]).forEach(r=>fix(r.items));
+  const st=prof.exSettings||{};Object.entries(move).forEach(([from,to])=>{if(st[from]){if(!st[to])st[to]=st[from];delete st[from]}});
+  const changed=[];for(const row of workoutRows){const w=row[1];if((w.items||[]).some(it=>move[it.ex])){fix(w.items);changed.push(row)}}
+  return changed;
+}
+async function mergeCustomIntoLib(){
+  const prof=await Local.get("meta","profile");if(!prof||!(prof.custom||[]).length)return;
+  const rows=await Local.all("workouts");const changed=mergeCore(prof,rows);if(!changed)return;
+  for(const [k,w] of changed)await Local.put("workouts",k,w);
+  await Local.put("meta","profile",prof);
+}
+function mergeCustomInBackup(data){const pr=(data.meta||[]).find(([k])=>k==="profile");if(pr)mergeCore(pr[1],data.workouts||[])}
+
 
 /* Muscle map shapes traced from a colour-coded anatomy chart (tools: trace.py).
    Each view: viewBox, sil (whole body outline), skin (non-muscle areas), regions [muscle key, path]. */
@@ -368,7 +407,7 @@ const Local=(()=>{
     });
     for(const st of STORES)await notify(st);
   }
-  return{open,get,put,profile,assets,dumpAll,replaceAll};
+  return{open,get,put,all,profile,assets,dumpAll,replaceAll};
 })();
 const exMap=()=>{const m={};LIB.concat(S.profile.custom||[]).forEach(e=>m[e.id]=e);return m};
 const exName=id=>(exMap()[id]||{name:"Unknown exercise"}).name;
@@ -716,7 +755,7 @@ function sheetHistory(){
 }
 
 /* ---------- version (shown in Backup) — bump on every push ---------- */
-const APP_VERSION="2026-11-25.1";
+const APP_VERSION="2026-11-25.2";
 
 /* ---------- backup ---------- */
 function sheetBackup(){
@@ -778,6 +817,7 @@ async function doImport(btn){
     data.meta=(data.meta||[]).filter(([k])=>!SYNC_KEYS.includes(k)).concat(keep);
     data.blobs=(data.blobs||[]).map(([k,u])=>[k,dataURLToBlob(u)]);
     Object.values(S.urls).forEach(u=>URL.revokeObjectURL(u));S.urls={};S.cmp=[];
+    try{mergeCustomInBackup(data)}catch(e){}
     await Local.replaceAll(data);
     S.lastExport=await Local.get("meta","lastExport");
     S.pendingImport=null;S.edit=null;renderSheet();render();toast("Backup restored");
@@ -1063,6 +1103,7 @@ render();
   try{await Local.open()}catch(e){S.status="nodb";render();return}
   try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){}
   S.assets=Local.assets;
+  try{await mergeCustomIntoLib()}catch(e){}
   S.pref=Local.profile;
   S.wcol=S.pref.collection("workouts");S.scol=S.pref.collection("stats");S.phcol=S.pref.collection("photos");
   try{S.lastExport=await Local.get("meta","lastExport")}catch(e){}

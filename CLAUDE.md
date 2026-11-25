@@ -40,6 +40,10 @@ The app is called **SetRep** (written with a capital R). It was previously calle
   backups/exports). After workouts/stats/routine changes the app PUTs `data/setrep-data.json` (numbers only, no
   photos) to the PRIVATE repo Shanedwyer312/workout-data and reads `reports/latest.md` back to show on the Week tab.
   The weekly report itself is written by a scheduled Claude task following workout-data's CLAUDE.md.
+- Exercise library: `LIB` in `index.html` (primary muscles = 1 set, secondary = 0.5 on the map and in reports).
+  To promote one of Shane's custom exercises into `LIB`, add the entry plus its name(s) to `LIB_ALIASES`;
+  `mergeCustomIntoLib()` moves his matching custom exercise (workouts, routines, settings) over on next app start
+  and on import, so history stays attached and nothing double counts.
 - Muscle map: the body shapes come from `tools/muscle-map/source.png`, a color-coded chart (one flat color per
   muscle group, made with ChatGPT). `tools/muscle-map/trace.py source.png out.js` traces it into the
   `BODY_VIEWS` block in `index.html` (front/back: outline, skin areas, muscle regions, detail lines).
