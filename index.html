@@ -18,12 +18,12 @@
 </style>
 </head><body>
 <style>
-/* Layout: single phone-width column, sticky top bar, fixed bottom tab bar; sheets slide over for editing. Gym-steel neutrals, cobalt for actions, a blood-warm heat scale reserved for muscle load. */
+/* Layout: single phone-width column, sticky top bar, fixed bottom tab bar; sheets slide over for editing. Gym-steel neutrals, ultraviolet for actions, a blood-warm heat scale reserved for muscle load. */
 :root{
   --bg:#e9ecef; --surface:#ffffff; --raise:#f4f6f8; --fg:#14181d; --muted:#5b6571; --line:#d3d9df;
-  --accent:#2452c9; --accent-fg:#ffffff; --accent-soft:#dfe7fb;
+  --accent:#4f2bd0; --accent-fg:#ffffff; --accent-soft:#e9e3fc;
   --sil:#d9dee4; --sil-line:#6f7a87; --seam:rgba(40,30,30,.38); --panel:#dde2e8; --panel-hi:#f7f9fb;
-  --h0:#58616e; --h1:#6e3328; --h2:#b0452a; --h3:#f3702c; --h4:#ff2d4a; --ink:#16171c; --burst:rgba(36,82,201,.07);
+  --h0:#58616e; --h1:#6e3328; --h2:#b0452a; --h3:#f3702c; --h4:#ff2d4a; --ink:#16171c; --burst:rgba(79,43,208,.07);
   --good:#1f7a4d; --warn:#b4542a;
   --f-display:"Saira Condensed","Arial Narrow",Impact,sans-serif;
   --f-body:"Figtree",system-ui,-apple-system,"Segoe UI",sans-serif;
@@ -32,15 +32,15 @@
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#0f1215; --surface:#181c21; --raise:#20252b; --fg:#e6e9ed; --muted:#8e98a4; --line:#2a3038;
-  --accent:#7196ff; --accent-fg:#0b1020; --accent-soft:#1d2741;
+  --accent:#8a63ff; --accent-fg:#0f0a20; --accent-soft:#211a3d;
   --sil:#2a313a; --sil-line:#6a7584; --seam:rgba(0,0,0,.55); --panel:#0c0f12; --panel-hi:#1e252d;
-  --h0:#58616e; --h1:#6e3328; --h2:#b0452a; --h3:#f3702c; --h4:#ff2d4a; --ink:#030405; --burst:rgba(113,150,255,.07);
+  --h0:#58616e; --h1:#6e3328; --h2:#b0452a; --h3:#f3702c; --h4:#ff2d4a; --ink:#030405; --burst:rgba(138,99,255,.07);
   --good:#5cc994; --warn:#f0925e; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#0d0f12; --surface:#161a1f; --raise:#1e2329; --fg:#e8ebef; --muted:#8b95a1; --line:#262c34;
-  --accent:#6f93ff; --accent-fg:#0a0f1f; --accent-soft:#1a2440;
+  --accent:#8a63ff; --accent-fg:#0f0a20; --accent-soft:#211a3d;
   --sil:#2a313a; --sil-line:#6a7584; --seam:rgba(0,0,0,.55); --panel:#0c0f12; --panel-hi:#1e252d;
-  --h0:#58616e; --h1:#6e3328; --h2:#b0452a; --h3:#f3702c; --h4:#ff2d4a; --ink:#030405; --burst:rgba(113,150,255,.07);
+  --h0:#58616e; --h1:#6e3328; --h2:#b0452a; --h3:#f3702c; --h4:#ff2d4a; --ink:#030405; --burst:rgba(138,99,255,.07);
   --good:#4fd08f; --warn:#f0925e; color-scheme:dark}
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15px;line-height:1.45}
@@ -755,7 +755,7 @@ function sheetHistory(){
 }
 
 /* ---------- version (shown in Backup) — bump on every push ---------- */
-const APP_VERSION="2026-11-25.2";
+const APP_VERSION="2026-11-25.3";
 
 /* ---------- backup ---------- */
 function sheetBackup(){
