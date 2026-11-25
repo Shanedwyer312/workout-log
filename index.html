@@ -716,7 +716,7 @@ function sheetHistory(){
 }
 
 /* ---------- version (shown in Backup) — bump on every push ---------- */
-const APP_VERSION="2026-11-24.4";
+const APP_VERSION="2026-11-25.1";
 
 /* ---------- backup ---------- */
 function sheetBackup(){
@@ -793,7 +793,7 @@ S.sync=null;S.report=null;S.syncState="";
 const b64=str=>{const bytes=new TextEncoder().encode(str);let bin="";for(let i=0;i<bytes.length;i+=0x8000)bin+=String.fromCharCode.apply(null,bytes.subarray(i,i+0x8000));return btoa(bin)};
 const unb64=b=>new TextDecoder().decode(Uint8Array.from(atob(b.replace(/\s/g,"")),c=>c.charCodeAt(0)));
 async function gh(path,opt={}){
-  const r=await fetch(`https://api.github.com/repos/${S.sync.repo}/${path}`,{...opt,cache:"no-store",headers:{Authorization:`Bearer ${S.sync.token}`,Accept:"application/vnd.github+json","X-GitHub-Api-Version":"2022-11-28",...(opt.headers||{})}});
+  const r=await fetch(`https://api.github.com/repos/${S.sync.repo}${path?"/"+path:""}`,{...opt,cache:"no-store",headers:{Authorization:`Bearer ${S.sync.token}`,Accept:"application/vnd.github+json","X-GitHub-Api-Version":"2022-11-28",...(opt.headers||{})}});
   if(r.status===404)return null;
   if(!r.ok){const e=new Error("gh "+r.status);e.status=r.status;throw e}
   return r.json();
@@ -842,13 +842,13 @@ async function pullReport(){
 function refreshSyncUI(){if(S.edit?.kind==="backup")rerenderSheetKeepScroll()}
 async function saveSyncSettings(){
   const repo=($("#sync-repo")?.value||"").trim().replace(/^https?:\/\/github.com\//,"").replace(/\/$/,"");
-  const token=($("#sync-token")?.value||"").trim()||S.sync?.token||"";
+  const token=($("#sync-token")?.value||"").replace(/[^\x21-\x7E]/g,"")||S.sync?.token||"";
   if(!/^[\w.-]+\/[\w.-]+$/.test(repo)){toast("Repo should look like Shanedwyer312/workout-data");return}
   if(!token){toast("Paste the upload key first");return}
   const prev=S.sync;S.sync={repo,token,last:prev?.last||null};
   try{const r=await gh("");if(!r)throw Object.assign(new Error("x"),{status:404});
     if(!r.private){S.sync=prev;toast("That repo is public. Use a private repo so your data stays private.");return}
-  }catch(e){S.sync=prev;toast(e.status===401||e.status===403?"GitHub rejected that key.":e.status===404?"Can't find that repo with this key.":"Couldn't reach GitHub. Check your connection.");return}
+  }catch(e){S.sync=prev;toast(e.status===401||e.status===403?"GitHub rejected that key.":e.status===404?"Can't find that repo with this key.":e.status?`GitHub said no (error ${e.status}).`:navigator.onLine?`Couldn't reach GitHub (${(e.message||"unknown").slice(0,60)}).`:"You're offline. Try again when connected.");return}
   await Local.put("meta","sync",S.sync);await Local.put("meta","syncHash",null);
   toast("Connected. Syncing now…");await syncNow(false);refreshSyncUI();
 }
