@@ -326,6 +326,9 @@ const fmtShort=s=>pdate(s).toLocaleDateString(undefined,{month:"short",day:"nume
 const num=v=>{const n=parseFloat(v);return isFinite(n)?n:null};
 const e1rm=(w,r)=>(w&&r)?(r===1?w:w*(1+r/30)):0;
 const fmtN=n=>n==null?"–":(Math.round(n*10)/10).toLocaleString();
+/* a set with no weight entered is a bodyweight set */
+const isBW=w=>w==null||w===""||+w===0;
+const fmtW=w=>isBW(w)?"BW":fmtN(+w);
 const lvl=n=>n<=0?0:n<4?1:n<8?2:n<12?3:4;
 const LVL_LABEL=["0","1–3","4–7","8–11","12+"];
 
@@ -434,12 +437,28 @@ const BODY_DEFS=`<svg width="0" height="0" style="position:absolute" aria-hidden
 <radialGradient id="floor"><stop offset="0" stop-color="#000" stop-opacity=".6"/><stop offset="1" stop-color="#000" stop-opacity="0"/></radialGradient>
 </defs></svg>`;
 function weekRange(off){const s=addDays(monday(new Date()),off*7);return[ymd(s),ymd(addDays(s,6)),s]}
+/* Muscle map scoring. Each set scores: role (primary 1, secondary 0.5)
+   x heaviness vs. your own top weight on that exercise over the 8 weeks up to that day
+   (90%+ of it = 1.0, 70-90% = 0.8, lighter = 0.5; bodyweight set = 0.7)
+   x 0.8 if only 1-3 reps. Raw pounds aren't used because hard sets build muscle about
+   the same across a wide range of weights; this way legs don't always outscore arms. */
+const SCORE_WEEKS=8;
+function setIntensity(ex,s,date,tops){
+  const w=+s.w||0;let f;
+  if(!w)f=0.7;
+  else{const from=ymd(addDays(pdate(date),-SCORE_WEEKS*7));let top=w;
+    (tops[ex]||[]).forEach(([d,t])=>{if(d>=from&&d<=date&&t>top)top=t});
+    const r=w/top;f=r>=0.9?1:r>=0.7?0.8:0.5}
+  if(s.r>0&&s.r<=3)f*=0.8;
+  return f;
+}
+function topWeights(){const t={};S.workouts.forEach(o=>(o.items||[]).forEach(it=>{const m=Math.max(0,...(it.sets||[]).filter(s=>s&&s.r>0).map(s=>+s.w||0));if(m>0)(t[it.ex]=t[it.ex]||[]).push([o.date,m])}));return t}
 function muscleLoad(ws){
   const load={},src={};Object.keys(MUSCLES).forEach(m=>{load[m]=0;src[m]={}});
-  const ex=exMap();
+  const ex=exMap(),tops=topWeights();
   ws.forEach(w=>(w.items||[]).forEach(it=>{
     const e=ex[it.ex];if(!e)return;
-    const n=(it.sets||[]).filter(s=>s&&s.r>0).length;if(!n)return;
+    const n=(it.sets||[]).filter(s=>s&&s.r>0).reduce((a,s)=>a+setIntensity(it.ex,s,w.date,tops),0);if(!n)return;
     e.p.forEach(m=>{load[m]+=n;src[m][e.name]=(src[m][e.name]||0)+n});
     e.s.forEach(m=>{load[m]+=n*0.5;src[m][e.name]=(src[m][e.name]||0)+n*0.5});
   }));
@@ -480,8 +499,8 @@ function viewWeek(){
     <div><span>Working sets</span><b>${sets}</b></div>
     <div><span>Volume ${U()}</span><b>${vol>=10000?Math.round(vol/1000)+"k":Math.round(vol).toLocaleString()}</b></div>
   </div>
-  ${ws.length?`<div class="stack"><div class="eyebrow">Sets per muscle · secondary muscles count half</div><div class="bars">${ranked.map(m=>`<button class="bar" data-act="selm" data-m="${m}"><span>${MUSCLES[m]}</span><span class="track"><span class="fill" style="display:block;width:${(load[m]/max*100).toFixed(1)}%;background:var(--h${Math.max(1,lvl(load[m]))})"></span></span><span class="n">${fmtN(load[m])}</span></button>`).join("")}</div></div>`
-  :`<div class="empty"><strong style="color:var(--fg)">No sets logged ${S.weekOff===0?"yet this week":"this week"}</strong>Log a workout and the body map fills in by how many sets each muscle got.<button class="btn" data-act="newwk">Start a workout</button></div>`}
+  ${ws.length?`<div class="stack"><div class="eyebrow">Effective sets per muscle · weighted by how heavy</div><div class="bars">${ranked.map(m=>`<button class="bar" data-act="selm" data-m="${m}"><span>${MUSCLES[m]}</span><span class="track"><span class="fill" style="display:block;width:${(load[m]/max*100).toFixed(1)}%;background:var(--h${Math.max(1,lvl(load[m]))})"></span></span><span class="n">${fmtN(load[m])}</span></button>`).join("")}</div></div>`
+  :`<div class="empty"><strong style="color:var(--fg)">No sets logged ${S.weekOff===0?"yet this week":"this week"}</strong>Log a workout and the body map fills in by how hard each muscle worked.<button class="btn" data-act="newwk">Start a workout</button></div>`}
   </section>`;
 }
 function paintBodies(){
@@ -619,6 +638,7 @@ function setMark(ex,s,j,co,best,w){
   const rb=repBestAt(ex,sw,w);if(rb!=null&&sr>rb)return"rep";
   const l=co.last?co.last.sets[Math.min(j,co.last.sets.length-1)]:null;if(!l)return"";
   const lw=l.w||0;
+  if(sw===0&&lw===0)return sr>l.r?"up":sr<l.r?"down":"same";
   if(sw>lw&&sr>=co.c.min)return"up";
   const a=e1rm(sw,sr),b=e1rm(lw,l.r);
   if(sw===lw&&sr===l.r)return"same";
@@ -636,9 +656,9 @@ function coachHTML(it,i,co){
   if(co.kind==="new")return `<div class="coach"><span class="ci">🎯</span><span>First time logged. Pick a weight you can do <b>${c.min}–${c.max}</b> reps with.</span></div>`;
   const t=co.targets;
   const line=co.kind==="up"
-    ?`<b>Add weight:</b> <span class="num">${fmtN(t[0].w)} × ${c.min}</span>. You hit ${c.max}+ on every set last time.`
-    :`<b>Beat last time:</b> <span class="num">${t.map(x=>`${fmtN(x.w)}×${x.r}`).join(", ")}</span>`;
-  const empty=it.sets.some(s=>s.w===""||s.r===""||s.w==null||s.r==null);
+    ?`<b>Add weight:</b> <span class="num">${fmtW(t[0].w)} × ${c.min}</span>. You hit ${c.max}+ on every set last time.`
+    :`<b>Beat last time:</b> <span class="num">${t.map(x=>`${fmtW(x.w)}×${x.r}`).join(", ")}</span>`;
+  const empty=it.sets.some((s,j)=>{const t=tgtAt(co,j);return s.r===""||s.r==null||((s.w===""||s.w==null)&&t&&!isBW(t.w))});
   return `<div class="coach ${co.kind==="up"?"go":""}"><span class="ci">🎯</span><span>${line}</span>${empty?`<button class="btn quiet sm" data-act="filltgt" data-i="${i}">Fill</button>`:""}</div>
   ${co.stall?`<div class="coach warn"><span class="ci">⚠️</span><span>No progress in 3 sessions. Try a lighter week (about −10%), a different rep range, or a new variation.</span></div>`:""}`;
 }
@@ -646,12 +666,12 @@ function itemHTML(it,i,w){
   const prev=prevFor(it.ex,w);const best=bestBefore(it.ex,w);const co=coachFor(it.ex,w);
   return `<div class="ex">
   <div class="ex-h"><div class="stack" style="gap:2px;min-width:0"><button class="ex-name" data-act="hist" data-ex="${it.ex}">${esc(exName(it.ex))}</button>
-  <span class="last">${prev?`Last (${fmtShort(prev.date)}): <span class="num">${prev.sets.map(s=>`${fmtN(s.w)}×${s.r}`).join(", ")}</span>`:"First time logging this"}</span></div>
+  <span class="last">${prev?`Last (${fmtShort(prev.date)}): <span class="num">${prev.sets.map(s=>`${fmtW(s.w)}×${s.r}`).join(", ")}</span>`:"First time logging this"}</span></div>
   <div class="row" style="gap:2px;flex-wrap:nowrap">${i>0?`<button class="x" data-act="upex" data-i="${i}" aria-label="Move up" title="Move up">↑</button>`:""}<button class="x" data-act="swapex" data-i="${i}" aria-label="Swap exercise" title="Swap exercise">⇄</button><button class="x" data-act="rmex" data-i="${i}" aria-label="Remove exercise" title="Remove">×</button></div></div>
   ${coachHTML(it,i,co)}
   <div class="sets"><span class="hd">Set</span><span class="hd">${U()}</span><span class="hd">Reps</span><span></span><span></span>
   ${it.sets.map((s,j)=>{const ps=tgtAt(co,j);const mk=setMark(it.ex,s,j,co,best,w);return `<span class="sn">${j+1}</span>
-  <input id="s-${i}-${j}-w" inputmode="decimal" data-i="${i}" data-j="${j}" data-k="w" value="${s.w??""}" placeholder="${ps?fmtN(ps.w):""}" aria-label="Set ${j+1} weight">
+  <input id="s-${i}-${j}-w" inputmode="decimal" data-i="${i}" data-j="${j}" data-k="w" value="${s.w??""}" placeholder="${ps?fmtW(ps.w):""}" aria-label="Set ${j+1} weight">
   <input id="s-${i}-${j}-r" inputmode="numeric" data-i="${i}" data-j="${j}" data-k="r" value="${s.r??""}" placeholder="${ps?ps.r:""}" aria-label="Set ${j+1} reps">
   <span class="mkc" id="mk-${i}-${j}">${MARK[mk]||""}</span><button class="x" data-act="rmset" data-i="${i}" data-j="${j}" aria-label="Remove set">×</button>`}).join("")}</div>
   <button class="btn quiet sm" data-act="addset" data-i="${i}">+ Set</button></div>`;
@@ -691,7 +711,7 @@ function summarize(e){
     const bestNow=Math.max(...done.map(x=>e1rm(x.w,x.r)));
     const delta=co.last&&co.last.e>0?(bestNow/co.last.e-1)*100:null;
     const topNow=Math.max(...done.map(x=>x.w)),lastTop=co.last?Math.max(...co.last.sets.map(x=>x.w||0)):0;
-    r.ex.push({ex:it.ex,txt:done.map(x=>`${fmtN(x.w)}×${x.r}`).join(", "),delta,up,dn,jump:co.last&&topNow>lastTop?topNow-lastTop:0});
+    r.ex.push({ex:it.ex,txt:done.map(x=>`${fmtW(x.w)}×${x.r}`).join(", "),delta,up,dn,jump:co.last&&topNow>lastTop?topNow-lastTop:0});
   });
   const prevSame=S.workouts.filter(o=>o.id!==e.id&&(o.name||"")===(w.name||"")&&o.date<=w.date).sort((a,b)=>a.date===b.date?(b.created||0)-(a.created||0):(a.date<b.date?1:-1))[0];
   if(prevSame){const pv=(prevSame.items||[]).reduce((a,it)=>a+(it.sets||[]).filter(x=>x&&x.r>0).reduce((b,x)=>b+(x.w||0)*x.r,0),0);if(pv>0)r.volDelta=(r.vol/pv-1)*100}
@@ -747,15 +767,15 @@ function sheetHistory(){
   ${(()=>{const c=exSet(ex);return `<div class="card stack" style="gap:8px"><div class="eyebrow">Progression</div>
   <div class="grid3"><label>Reps from<input id="xs-min" data-xs="min" data-ex="${ex}" inputmode="numeric" value="${c.min}"></label><label>Reps to<input id="xs-max" data-xs="max" data-ex="${ex}" inputmode="numeric" value="${c.max}"></label><label>Add (${U()})<input id="xs-inc" data-xs="inc" data-ex="${ex}" inputmode="decimal" value="${c.inc}"></label></div>
   <div class="muted" style="font-size:12px">Work in this rep range. When you hit the top of it on every set, the coach tells you to add this much weight.</div></div>`})()}
-  ${best?`<div class="statline" style="grid-template-columns:1fr 1fr"><div><span>Best set</span><b>${fmtN(best.top.w)}×${best.top.r}</b></div><div><span>Est. 1-rep max</span><b>${Math.round(best.e)} <small class="muted" style="font-size:12px">${U()}</small></b></div></div>
+  ${best?`<div class="statline" style="grid-template-columns:1fr 1fr"><div><span>Best set</span><b>${fmtW(best.top.w)}×${best.top.r}</b></div><div><span>Est. 1-rep max</span><b>${Math.round(best.e)} <small class="muted" style="font-size:12px">${U()}</small></b></div></div>
   <div class="card stack"><div class="eyebrow">Estimated 1RM by session</div>${lineChart(pts,U())}</div>
-  <div class="list">${rows.map(r=>`<div class="card" style="padding:10px 12px"><div class="row between"><span class="num muted" style="font-size:12px">${fmtD(r.d)}</span><span class="num" style="font-size:12px">e1RM ${Math.round(r.e)}</span></div><div class="num">${r.ss.map(s=>`${fmtN(s.w)}×${s.r}`).join("  ")}</div></div>`).join("")}</div>`
+  <div class="list">${rows.map(r=>`<div class="card" style="padding:10px 12px"><div class="row between"><span class="num muted" style="font-size:12px">${fmtD(r.d)}</span><span class="num" style="font-size:12px">e1RM ${Math.round(r.e)}</span></div><div class="num">${r.ss.map(s=>`${fmtW(s.w)}×${s.r}`).join("  ")}</div></div>`).join("")}</div>`
   :`<div class="empty">No completed sets for this exercise yet.</div>`}
   </div></div></div>`;
 }
 
 /* ---------- version (shown in Backup) — bump on every push ---------- */
-const APP_VERSION="2026-11-25.3";
+const APP_VERSION="2026-11-26.1";
 
 /* ---------- backup ---------- */
 function sheetBackup(){
@@ -839,12 +859,13 @@ async function gh(path,opt={}){
   return r.json();
 }
 function syncPayload(){
-  const ex=exMap();
-  return{app:"setrep",version:1,updated:new Date().toISOString(),units:U(),
+  const ex=exMap(),tops=topWeights();
+  return{app:"setrep",version:2,updated:new Date().toISOString(),units:U(),
+    muscleScoring:"Each set counts primary 1 / secondary 0.5, times the set's intensity (1.0 = 90%+ of his 8-week top weight on that exercise, 0.8 = 70-90%, 0.5 = lighter, 0.7 = bodyweight; x0.8 for 1-3 reps). Weight 0 with bodyweight:true = bodyweight set.",
     routines:(S.profile.routines||[]).map(r=>({name:r.name,exercises:(r.items||[]).map(i=>({exercise:exName(i.ex),sets:i.sets}))})),
     exerciseSettings:Object.fromEntries(Object.keys(S.profile.exSettings||{}).map(k=>[exName(k),exSet(k)])),
     customExercises:(S.profile.custom||[]).map(e=>({name:e.name,primary:e.p,secondary:e.s})),
-    workouts:[...S.workouts].sort((a,b)=>a.date<b.date?-1:1).map(w=>({date:w.date,name:w.name,exercises:(w.items||[]).map(it=>({exercise:exName(it.ex),primary:(ex[it.ex]||{}).p||[],secondary:(ex[it.ex]||{}).s||[],sets:(it.sets||[]).filter(s=>s&&s.r>0).map(s=>({weight:s.w||0,reps:s.r}))})).filter(e=>e.sets.length)})),
+    workouts:[...S.workouts].sort((a,b)=>a.date<b.date?-1:1).map(w=>({date:w.date,name:w.name,exercises:(w.items||[]).map(it=>({exercise:exName(it.ex),primary:(ex[it.ex]||{}).p||[],secondary:(ex[it.ex]||{}).s||[],sets:(it.sets||[]).filter(s=>s&&s.r>0).map(s=>({weight:s.w||0,reps:s.r,bodyweight:!(+s.w),intensity:Math.round(setIntensity(it.ex,s,w.date,tops)*100)/100}))})).filter(e=>e.sets.length)})),
     bodyStats:[...S.stats].sort((a,b)=>a.date<b.date?-1:1),
     photos:S.photos.map(p=>({date:p.date,pose:p.pose}))};
 }

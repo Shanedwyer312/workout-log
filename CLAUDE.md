@@ -13,7 +13,7 @@ The app is called **SetRep** (written with a capital R). It was previously calle
 - Workout logging and saved routines
 - Body stats
 - Progress photos (with side-by-side compare)
-- A weekly muscle map, colored by sets per muscle
+- A weekly muscle map, colored by effective sets per muscle (weighted by how heavy each set was)
 
 ## Where it's going
 - Android only. The goal is a standalone app installed on his phone, ideally as a downloadable APK.
@@ -27,7 +27,7 @@ The app is called **SetRep** (written with a capital R). It was previously calle
   https://shanedwyer312.github.io/workout-log/ — every push updates it within a minute or two.
 - Shane uses it on his phone via Chrome → "Add to Home screen".
 - Files: `index.html` (the whole app), `sw.js` (offline copy; bump `CACHE` name when adding files to it),
-  `manifest.webmanifest` (home-screen install), `icons/`, `fonts/` (bundled so it works offline).
+  `manifest.webmanifest` (home-screen install), `icons/` (`icon.svg` is the source: white fist gripping a black dumbbell on ultraviolet #4f2bd0; render PNGs from it with rsvg-convert), `fonts/` (bundled so it works offline).
 - Data lives in the browser's IndexedDB database `setrep` (stores: meta, workouts, stats, photos, blobs).
   A small `Local` layer in `index.html` stands in for the old Claude storage API.
 - Backup button (top right) exports one JSON file with everything, photos included, and imports it back
@@ -40,7 +40,13 @@ The app is called **SetRep** (written with a capital R). It was previously calle
   backups/exports). After workouts/stats/routine changes the app PUTs `data/setrep-data.json` (numbers only, no
   photos) to the PRIVATE repo Shanedwyer312/workout-data and reads `reports/latest.md` back to show on the Week tab.
   The weekly report itself is written by a scheduled Claude task following workout-data's CLAUDE.md.
-- Exercise library: `LIB` in `index.html` (primary muscles = 1 set, secondary = 0.5 on the map and in reports).
+- Bodyweight: a set with no weight entered is a bodyweight set (stored as null, shown as "BW" via `fmtW()`/`isBW()`).
+- Muscle map scoring (`setIntensity()` / `muscleLoad()`): each set = role (primary 1, secondary 0.5) × intensity.
+  Intensity compares the set to Shane's top weight on that exercise over the 8 weeks up to that day:
+  90%+ = 1.0, 70–90% = 0.8, lighter = 0.5; bodyweight = 0.7; ×0.8 for 1–3 reps. Deliberately NOT raw pounds
+  (hard sets build muscle similarly across loads; raw pounds would make legs always outscore arms).
+  The sync payload (version 2) sends `bodyweight` and `intensity` per set so the weekly report matches.
+- Exercise library: `LIB` in `index.html` (primary vs. secondary muscles feed the scoring above).
   To promote one of Shane's custom exercises into `LIB`, add the entry plus its name(s) to `LIB_ALIASES`;
   `mergeCustomIntoLib()` moves his matching custom exercise (workouts, routines, settings) over on next app start
   and on import, so history stays attached and nothing double counts.
