@@ -27,7 +27,7 @@ The app is called **SetRep** (written with a capital R). It was previously calle
   https://shanedwyer312.github.io/workout-log/ — every push updates it within a minute or two.
 - Shane uses it on his phone via Chrome → "Add to Home screen".
 - Files: `index.html` (the whole app), `sw.js` (offline copy; bump `CACHE` name when adding files to it),
-  `manifest.webmanifest` (home-screen install), `icons/` (`icon.svg` is the source: white fist gripping a black dumbbell on ultraviolet #4f2bd0; render PNGs from it with rsvg-convert), `fonts/` (bundled so it works offline).
+  `manifest.webmanifest` (home-screen install), `icons/` (`icon.svg` is the source: white fist gripping a black dumbbell on ultraviolet #4f2bd0; render PNGs from it with rsvg-convert. Chrome 144+ only picks up a new home-screen icon when the icon FILE NAME changes, so bump the -vN suffix in the names (manifest, sw.js, index.html) whenever the icon changes), `fonts/` (bundled so it works offline).
 - Data lives in the browser's IndexedDB database `setrep` (stores: meta, workouts, stats, photos, blobs).
   A small `Local` layer in `index.html` stands in for the old Claude storage API.
 - Backup button (top right) exports one JSON file with everything, photos included, and imports it back
