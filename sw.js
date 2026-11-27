@@ -2,14 +2,14 @@
    Keeps a copy of the app on the phone. When online, it always fetches the newest version
    (so updates show up right away) and refreshes the saved copy; when offline, it uses the saved copy.
    Your workout data is NOT stored here — that lives in the app's on-device database. */
-const CACHE = "setrep-v4";
+const CACHE = "setrep-v5";
 const FILES = [
   "./",
   "index.html",
   "manifest.webmanifest",
-  "icons/icon-192-v2.png",
-  "icons/icon-512-v2.png",
-  "icons/icon-maskable-512-v2.png",
+  "icons/icon-192-v3.png",
+  "icons/icon-512-v3.png",
+  "icons/icon-maskable-512-v3.png",
   "fonts/saira-condensed-latin-600-normal.woff2",
   "fonts/saira-condensed-latin-700-normal.woff2",
   "fonts/saira-condensed-latin-800-normal.woff2",
