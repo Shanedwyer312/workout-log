@@ -50,6 +50,9 @@ The app is called **SetRep** (written with a capital R). It was previously calle
   To promote one of Shane's custom exercises into `LIB`, add the entry plus its name(s) to `LIB_ALIASES`;
   `mergeCustomIntoLib()` moves his matching custom exercise (workouts, routines, settings) over on next app start
   and on import, so history stays attached and nothing double counts.
+  The library has ~160 exercises (heavy on machines/cables, lats and legs). Picker search uses `exMatch()`:
+  every word must match and gym shorthand works (`EX_SYN`: db, bb, hs, rdl, ohp, lpd…).
+  Bodyweight lifts (no weight) are tracked by reps: the coach's stall check uses total reps for them.
 - Muscle map: the body shapes come from `tools/muscle-map/source.png`, a color-coded chart (one flat color per
   muscle group, made with ChatGPT). `tools/muscle-map/trace.py source.png out.js` traces it into the
   `BODY_VIEWS` block in `index.html` (front/back: outline, skin areas, muscle regions, detail lines).

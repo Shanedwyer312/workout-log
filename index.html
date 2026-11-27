@@ -218,7 +218,7 @@ L("dbbench","Dumbbell Bench Press",["chest"],["front_delts","triceps"]),
 L("incdb","Incline Dumbbell Press",["chest","front_delts"],["triceps"]),
 L("dips","Dips",["chest","triceps"],["front_delts"]),
 L("pushup","Push-Up",["chest"],["triceps","front_delts","abs"]),
-L("cablefly","Cable Fly",["chest"],["front_delts"]),
+L("cablefly","Cable Crossover / Fly",["chest"],["front_delts"]),
 L("pecdeck","Pec Deck",["chest"],[]),
 L("deadlift","Deadlift",["lower_back","glutes","hamstrings"],["traps","forearms","quads","upper_back"]),
 L("pullup","Pull-Up",["lats"],["biceps","upper_back","forearms"]),
@@ -275,7 +275,106 @@ L("revpec","Reverse Pec Deck",["rear_delts"],["upper_back"]),
 L("declcrunch","Decline Weighted Crunch",["abs"],["obliques"]),
 L("ffess","Front-Foot-Elevated Split Squat",["quads","glutes"],["adductors"]),
 L("lpcalf","Leg Press Calf Raise",["calves"],[]),
-L("hkr","Hanging Knee Raise",["abs"],["forearms"])
+L("hkr","Hanging Knee Raise",["abs"],["forearms"]),
+/* --- added 2026-11-26: bigger library (machines, cables, lats & legs) --- */
+L("mchest","Machine Chest Press",["chest"],["front_delts","triceps"]),
+L("hschest","Hammer Strength Chest Press",["chest"],["front_delts","triceps"]),
+L("mincchest","Machine Incline Chest Press",["chest","front_delts"],["triceps"]),
+L("hsinc","Hammer Strength Incline Press",["chest","front_delts"],["triceps"]),
+L("hsdecl","Hammer Strength Decline Press",["chest"],["triceps","front_delts"]),
+L("declbench","Decline Barbell Press",["chest"],["triceps","front_delts"]),
+L("decldb","Decline Dumbbell Press",["chest"],["triceps","front_delts"]),
+L("smithbench","Smith Machine Bench Press",["chest"],["front_delts","triceps"]),
+L("smithinc","Smith Machine Incline Press",["chest","front_delts"],["triceps"]),
+L("cablepress","Cable Chest Press",["chest"],["front_delts","triceps"]),
+L("chestdip","Chest Dip",["chest"],["triceps","front_delts"]),
+L("assistdip","Assisted Dip Machine",["chest","triceps"],["front_delts"]),
+L("dbfly","Dumbbell Fly",["chest"],["front_delts"]),
+L("incdbfly","Incline Dumbbell Fly",["chest"],["front_delts"]),
+L("lhfly","Low-to-High Cable Fly",["chest","front_delts"],[]),
+L("hlfly","High-to-Low Cable Fly",["chest"],[]),
+L("pullover","Dumbbell Pullover",["chest","lats"],["triceps"]),
+L("assistpull","Assisted Pull-Up Machine",["lats"],["biceps","upper_back"]),
+L("cglpd","Close-Grip Lat Pulldown",["lats"],["biceps","upper_back"]),
+L("uglpd","Underhand Lat Pulldown",["lats"],["biceps","upper_back"]),
+L("salpd","Single-Arm Lat Pulldown",["lats"],["biceps"]),
+L("hspull","Hammer Strength Pulldown",["lats"],["biceps","upper_back"]),
+L("hsrow","Hammer Strength Row",["upper_back","lats"],["biceps","rear_delts"]),
+L("hshirow","Hammer Strength High Row",["lats","upper_back"],["biceps","rear_delts"]),
+L("hslowrow","Hammer Strength Low Row",["lats","upper_back"],["biceps","rear_delts"]),
+L("mrow","Seated Machine Row",["upper_back","lats"],["biceps","rear_delts"]),
+L("csdbrow","Chest-Supported Dumbbell Row",["upper_back","lats"],["biceps","rear_delts"]),
+L("cstbar","Chest-Supported T-Bar Row",["upper_back","lats"],["biceps","rear_delts"]),
+L("sealrow","Seal Row",["upper_back","lats"],["biceps","rear_delts"]),
+L("pendlay","Pendlay Row",["upper_back","lats"],["biceps","rear_delts","lower_back"]),
+L("meadows","Meadows Row",["lats","upper_back"],["biceps","rear_delts"]),
+L("sacrow","Single-Arm Cable Row",["lats"],["upper_back","biceps"]),
+L("straightarm","Straight-Arm Pulldown",["lats"],[]),
+L("invrow","Inverted Row",["upper_back","lats"],["biceps","rear_delts"]),
+L("dbshrug","Dumbbell Shrug",["traps"],["forearms"]),
+L("smithshrug","Smith Machine Shrug",["traps"],["forearms"]),
+L("smithohp","Smith Machine Shoulder Press",["front_delts"],["side_delts","triceps"]),
+L("landmine","Landmine Press",["front_delts","chest"],["triceps"]),
+L("cablelat","Cable Lateral Raise",["side_delts"],[]),
+L("mlat","Machine Lateral Raise",["side_delts"],[]),
+L("cablerear","Cable Rear Delt Fly",["rear_delts"],["upper_back"]),
+L("cableuprow","Cable Upright Row",["side_delts","traps"],["biceps"]),
+L("ezcurl","EZ-Bar Curl",["biceps"],["forearms"]),
+L("cablecurl","Cable Curl",["biceps"],[]),
+L("inccurl","Incline Dumbbell Curl",["biceps"],[]),
+L("conccurl","Concentration Curl",["biceps"],[]),
+L("mpreacher","Machine Preacher Curl",["biceps"],[]),
+L("bayesian","Bayesian Cable Curl",["biceps"],[]),
+L("spider","Spider Curl",["biceps"],[]),
+L("ropehammer","Rope Hammer Curl",["biceps","forearms"],[]),
+L("revcurl","Reverse Curl",["forearms","biceps"],[]),
+L("ropepush","Rope Pushdown",["triceps"],[]),
+L("revpush","Reverse-Grip Tricep Pushdown",["triceps"],[]),
+L("cableohext","Cable Overhead Tricep Extension",["triceps"],[]),
+L("mtriext","Machine Tricep Extension",["triceps"],[]),
+L("seateddip","Seated Dip Machine",["triceps"],["chest","front_delts"]),
+L("jmpress","JM Press",["triceps"],["chest"]),
+L("kickback","Tricep Kickback",["triceps"],[]),
+L("benchdip","Bench Dip",["triceps"],["front_delts","chest"]),
+L("diamond","Diamond Push-Up",["triceps"],["chest","front_delts"]),
+L("revwrist","Reverse Wrist Curl",["forearms"],[]),
+L("farmer","Farmer's Carry",["forearms","traps"],["abs","obliques"]),
+L("deadhang","Dead Hang",["forearms"],["lats"]),
+L("smithsquat","Smith Machine Squat",["quads","glutes"],["adductors"]),
+L("pendsquat","Pendulum Squat",["quads"],["glutes"]),
+L("beltsquat","Belt Squat",["quads","glutes"],["adductors"]),
+L("goblet","Goblet Squat",["quads","glutes"],["adductors","abs"]),
+L("revhack","Reverse Hack Squat",["glutes","quads"],["hamstrings"]),
+L("sissy","Sissy Squat",["quads"],[]),
+L("sllegpress","Single-Leg Leg Press",["quads","glutes"],["adductors"]),
+L("splitsquat","Split Squat",["quads","glutes"],["adductors"]),
+L("revlunge","Reverse Lunge",["glutes","quads"],["hamstrings","adductors"]),
+L("stepup","Step-Up",["quads","glutes"],["hamstrings"]),
+L("seatedcurl","Seated Leg Curl",["hamstrings"],["calves"]),
+L("lyingcurl","Lying Leg Curl",["hamstrings"],["calves"]),
+L("standcurl","Standing Single-Leg Curl",["hamstrings"],[]),
+L("nordic","Nordic Curl",["hamstrings"],[]),
+L("ghr","Glute-Ham Raise",["hamstrings"],["glutes","calves"]),
+L("dbrdl","Dumbbell Romanian Deadlift",["hamstrings","glutes"],["lower_back","forearms"]),
+L("slrdl","Single-Leg Romanian Deadlift",["hamstrings","glutes"],["lower_back"]),
+L("smithhip","Smith Machine Hip Thrust",["glutes"],["hamstrings"]),
+L("mhipthrust","Hip Thrust Machine",["glutes"],["hamstrings"]),
+L("bridge","Glute Bridge",["glutes"],["hamstrings"]),
+L("abductor","Abductor Machine",["glutes"],[]),
+L("kickglute","Cable Glute Kickback",["glutes"],["hamstrings"]),
+L("pullthru","Cable Pull-Through",["glutes","hamstrings"],[]),
+L("revhyper","Reverse Hyper",["glutes","lower_back"],["hamstrings"]),
+L("smithcalf","Smith Machine Calf Raise",["calves"],[]),
+L("donkey","Donkey Calf Raise",["calves"],[]),
+L("slcalf","Single-Leg Calf Raise",["calves"],[]),
+L("abmachine","Ab Crunch Machine",["abs"],["obliques"]),
+L("declsitup","Decline Sit-Up",["abs"],["obliques"]),
+L("captain","Captain's Chair Leg Raise",["abs"],["obliques"]),
+L("legraise","Lying Leg Raise",["abs"],[]),
+L("bicycle","Bicycle Crunch",["abs"],["obliques"]),
+L("deadbug","Dead Bug",["abs"],["obliques"]),
+L("woodchop","Cable Woodchopper",["obliques"],["abs"]),
+L("pallof","Pallof Press",["obliques"],["abs"])
 ];
 /* Custom exercises that now have a built-in version. On startup (and after an import) any custom exercise
    whose name matches is merged into the built-in one: its workouts, routines and settings move over. */
@@ -286,7 +385,12 @@ const LIB_ALIASES={mshoulder:["machine shoulder press","shoulder press machine",
   declcrunch:["decline weighted crunch","weighted decline crunch","decline crunch"],
   ffess:["ffe split squat","front foot elevated split squat","front-foot-elevated split squat"],
   lpcalf:["calf raise on leg press","leg press calf raise","calf press on leg press","calf press"],
-  hkr:["hanging knee raise","hanging knee raises","hanging knee tuck"]};
+  hkr:["hanging knee raise","hanging knee raises","hanging knee tuck"],
+  hschest:["hammer strength chest press","hammer strength press","hs chest press","hammer chest press"],
+  mincchest:["machine incline chest press","incline machine press","machine incline press","incline chest press machine"],
+  chestdip:["chest dips","chest dip"],
+  cablefly:["cable crossover","cable crossovers","cable cross over"],
+  revpush:["reverse grip tricep pushdown","reverse grip triceps pushdown","reverse-grip pushdown","reverse grip pushdown"]};
 const normName=n=>String(n||"").toLowerCase().replace(/[^a-z0-9]/g,"");
 function mergeCore(prof,workoutRows){
   if(!prof||!(prof.custom||[]).length)return null;
@@ -626,7 +730,8 @@ function coachFor(ex,w){
   let kind,targets;
   if(top>0&&work.length&&work.every(s=>s.r>=c.max)){const nw=Math.round((top+c.inc)*100)/100;kind="up";targets=last.sets.map(()=>({w:nw,r:c.min}))}
   else{kind="reps";targets=last.sets.map(s=>({w:s.w,r:Math.min((s.r||0)+1,Math.max(c.max,s.r||0))}))}
-  const stall=ss.length>=4&&Math.max(ss[0].e,ss[1].e,ss[2].e)<=ss[3].e*1.005;
+  const sc=x=>x.e>0?x.e:x.sets.reduce((a,t)=>a+(t.r||0),0); /* bodyweight lifts: total reps */
+  const stall=ss.length>=4&&Math.max(sc(ss[0]),sc(ss[1]),sc(ss[2]))<=sc(ss[3])*1.005;
   return{kind,c,targets,stall,last};
 }
 const tgtAt=(co,j)=>co.targets.length?co.targets[Math.min(j,co.targets.length-1)]:null;
@@ -741,10 +846,19 @@ function sheetRoutine(){
   ${S.edit.isNew?"":`<div class="confirm">${S.confirm==="r"?`<span>Delete this routine?</span><button class="btn danger sm" data-act="delr">Delete</button><button class="txt" data-act="ask" data-k="">Cancel</button>`:`<button class="txt" style="color:var(--warn)" data-act="ask" data-k="r">Delete routine</button>`}</div>`}
   </div></div></div>`;
 }
+/* exercise search: every word must match; common gym shorthand is understood ("db press", "hs row", "rdl") */
+const EX_SYN={db:"dumbbell",dbs:"dumbbell",bb:"barbell",hs:"hammerstrength",hammerstrength:"hammerstrength",ez:"ez",ohp:"overheadpress",
+  rdl:"romaniandeadlift",rdls:"romaniandeadlift",lpd:"latpulldown",bss:"bulgariansplitsquat",tri:"tricep",tris:"tricep",triceps:"tricep",
+  bi:"curl",bis:"curl",biceps:"curl",lat:"lat",lats:"lat",delt:"delt",delts:"delt",ab:"ab",abs:"ab",calf:"calf",calves:"calf",smith:"smith"};
+function exMatch(name,q){if(!q)return true;const n=normName(name);
+  return q.toLowerCase().split(/\s+/).filter(Boolean).every(t=>{const k=normName(t);if(!k)return true;
+    const alt=EX_SYN[k];if(alt&&n.includes(alt))return true;if(n.includes(k))return true;
+    return k.length>3&&k.endsWith("s")&&n.includes(k.slice(0,-1))})}
 function sheetPicker(){
   const p=S.layer;const q=(p.q||"").toLowerCase();
   const all=LIB.concat(S.profile.custom||[]);
-  const list=all.filter(e=>(!q||e.name.toLowerCase().includes(q))&&(!p.m||e.p.includes(p.m)||e.s.includes(p.m)));
+  const list=all.filter(e=>exMatch(e.name,q)&&(!p.m||e.p.includes(p.m)||e.s.includes(p.m)));
+  if(p.m)list.sort((a,b)=>(b.p.includes(p.m)?1:0)-(a.p.includes(p.m)?1:0));
   return `<div class="sheet top2"><header class="sh-h"><button class="txt" data-act="closel">Back</button><h2>${p.swap!=null?"Swap exercise":"Add exercise"}</h2><span style="width:48px"></span></header>
   <div class="sh-b"><div class="inner">
   <input id="pk-q" placeholder="Search exercises" value="${esc(p.q||"")}" autocomplete="off">
@@ -775,7 +889,7 @@ function sheetHistory(){
 }
 
 /* ---------- version (shown in Backup) — bump on every push ---------- */
-const APP_VERSION="2026-11-26.3";
+const APP_VERSION="2026-11-26.4";
 
 /* ---------- backup ---------- */
 function sheetBackup(){
